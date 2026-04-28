@@ -1,0 +1,84 @@
+import './PlayerPanel.css';
+
+const SPECIAL_ICONS = {
+  most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '🛑', zamjena: '🔄',
+};
+
+const COLOR_HEX = {
+  red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
+  cyan: '#00acc1', purple: '#8e24aa', magenta: '#d81b60', orange: '#fb8c00',
+};
+
+export default function PlayerPanel({
+  players,
+  currentPlayerIndex,
+  phase,
+  diceValue,
+  onSelectSpecialForPlace,
+  selectedSpecial,
+  t,
+}) {
+  const current = players[currentPlayerIndex];
+
+  // Tally figure positions for current player
+  const atHome = current.figures.filter(f => f.pos === 'home').length;
+  const onBoard = current.figures.filter(f => typeof f.pos === 'object' && f.pos.ring).length;
+  const inFinish = current.figures.filter(f => typeof f.pos === 'object' && f.pos.lane).length;
+
+  // Unique specials for display (grouped)
+  const specialCounts = {};
+  current.specialsHeld.forEach(s => {
+    specialCounts[s] = (specialCounts[s] || 0) + 1;
+  });
+
+  return (
+    <div className="player-panel">
+      {/* Current player row */}
+      <div className="panel-current">
+        <div
+          className="panel-avatar"
+          style={{ backgroundColor: COLOR_HEX[current.color] }}
+        >
+          {current.name.charAt(0).toUpperCase()}
+        </div>
+        <div className="panel-info">
+          <span className="panel-name">{current.name}</span>
+          <span className="panel-status">
+            🏠{atHome} · 🎯{onBoard} · 🏁{inFinish}
+            {diceValue && <span className="panel-dice"> · 🎲{diceValue}</span>}
+          </span>
+        </div>
+      </div>
+
+      {/* Specials in hand */}
+      {current.specialsHeld.length > 0 && (
+        <div className="panel-specials">
+          {Object.entries(specialCounts).map(([type, count]) => (
+            <button
+              key={type}
+              className={`special-chip ${selectedSpecial === type ? 'special-chip--selected' : ''} ${phase === 'placing-special' ? 'special-chip--active' : ''}`}
+              onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
+              title={type}
+            >
+              {SPECIAL_ICONS[type]}{count > 1 ? `×${count}` : ''}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* All players strip */}
+      <div className="panel-players-strip">
+        {players.map((p, i) => (
+          <div
+            key={p.color}
+            className={`strip-player ${i === currentPlayerIndex ? 'strip-player--active' : ''}`}
+            style={{ '--pcolor': COLOR_HEX[p.color] }}
+          >
+            <div className="strip-dot" style={{ backgroundColor: COLOR_HEX[p.color] }} />
+            <span className="strip-finish">{p.figures.filter(f => typeof f.pos === 'object' && f.pos.lane).length}/4</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

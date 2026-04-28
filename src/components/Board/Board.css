@@ -1,0 +1,154 @@
+.board-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+}
+
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(19, 1fr);
+  grid-template-rows: repeat(19, 1fr);
+  width: min(100vw, 56svh);
+  height: min(100vw, 56svh);
+  border: 2px solid var(--board-border);
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: var(--board-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.board-cell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid var(--board-border);
+  font-size: calc(min(100vw, 56svh) / 40);
+  overflow: hidden;
+  cursor: default;
+  transition: background-color 0.15s;
+}
+
+/* Cell type colors */
+.board-cell--empty    { background-color: transparent; border-color: transparent; }
+.board-cell--center   { background-color: var(--board-bg); }
+.board-cell--outer-path { background-color: var(--board-path); }
+.board-cell--inner-path { background-color: var(--board-path); }
+
+/* Player-colored HOME cells */
+.board-cell--home.board-cell--red     { background-color: #e53935; }
+.board-cell--home.board-cell--yellow  { background-color: #fdd835; }
+.board-cell--home.board-cell--blue    { background-color: #1e88e5; }
+.board-cell--home.board-cell--green   { background-color: #43a047; }
+.board-cell--home.board-cell--cyan    { background-color: #00acc1; }
+.board-cell--home.board-cell--purple  { background-color: #8e24aa; }
+.board-cell--home.board-cell--magenta { background-color: #d81b60; }
+.board-cell--home.board-cell--orange  { background-color: #fb8c00; }
+
+/* Finish cells — lighter tint of player color */
+.board-cell--outer-finish.board-cell--red,
+.board-cell--inner-finish.board-cell--red     { background-color: #ffcdd2; }
+.board-cell--outer-finish.board-cell--yellow,
+.board-cell--inner-finish.board-cell--yellow  { background-color: #fff9c4; }
+.board-cell--outer-finish.board-cell--blue,
+.board-cell--inner-finish.board-cell--blue    { background-color: #bbdefb; }
+.board-cell--outer-finish.board-cell--green,
+.board-cell--inner-finish.board-cell--green   { background-color: #c8e6c9; }
+.board-cell--outer-finish.board-cell--cyan,
+.board-cell--inner-finish.board-cell--cyan    { background-color: #b2ebf2; }
+.board-cell--outer-finish.board-cell--purple,
+.board-cell--inner-finish.board-cell--purple  { background-color: #e1bee7; }
+.board-cell--outer-finish.board-cell--magenta,
+.board-cell--inner-finish.board-cell--magenta { background-color: #fce4ec; }
+.board-cell--outer-finish.board-cell--orange,
+.board-cell--inner-finish.board-cell--orange  { background-color: #ffe0b2; }
+
+[data-theme='dark'] .board-cell--outer-finish,
+[data-theme='dark'] .board-cell--inner-finish {
+  opacity: 0.85;
+}
+
+/* Moveable target highlight */
+.board-cell--target {
+  background-color: rgba(255, 235, 59, 0.45) !important;
+  cursor: pointer;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+/* Figures */
+.figures-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  padding: 1px;
+}
+
+.figures-group--home {
+  gap: 1px;
+}
+
+.figure {
+  width: calc(min(100vw, 56svh) / 19 * 0.55);
+  height: calc(min(100vw, 56svh) / 19 * 0.55);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.7);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.figure:active {
+  transform: scale(0.9);
+}
+
+.figure--moveable {
+  cursor: pointer;
+  animation: pulse 1s ease-in-out infinite;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(255,235,59,0.8);
+}
+
+.figure--selected {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4CAF50;
+  transform: scale(1.2);
+}
+
+/* Special square icon */
+.special-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: calc(min(100vw, 56svh) / 38);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Finish slot number */
+.finish-slot-num {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  font-size: calc(min(100vw, 56svh) / 60);
+  font-weight: 700;
+  color: rgba(0,0,0,0.4);
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Center text */
+.board-center-text {
+  font-size: calc(min(100vw, 56svh) / 19 * 0.7);
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}

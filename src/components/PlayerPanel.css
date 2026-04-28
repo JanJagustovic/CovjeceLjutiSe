@@ -1,0 +1,114 @@
+.player-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+}
+
+.panel-current {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-sm);
+}
+
+.panel-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+  flex-shrink: 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+.panel-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.panel-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.panel-status {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.panel-dice {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.panel-specials {
+  display: flex;
+  gap: var(--sp-xs);
+  flex-wrap: wrap;
+}
+
+.special-chip {
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  font-size: 1rem;
+  cursor: default;
+  transition: all var(--transition);
+}
+
+.special-chip--active {
+  cursor: pointer;
+  border-color: var(--accent);
+}
+
+.special-chip--selected {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.panel-players-strip {
+  display: flex;
+  gap: var(--sp-xs);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+
+.strip-player {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.strip-player--active {
+  border-color: var(--pcolor);
+  background: color-mix(in srgb, var(--pcolor) 15%, var(--bg-card));
+}
+
+.strip-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.strip-finish {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
