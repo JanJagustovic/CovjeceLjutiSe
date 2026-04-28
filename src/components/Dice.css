@@ -41,8 +41,8 @@
 }
 
 .dice-roll-btn {
-  padding: var(--sp-sm) var(--sp-md);
-  font-size: 0.95rem;
+  padding: 5px var(--sp-md);
+  font-size: 0.9rem;
   white-space: nowrap;
 }
 

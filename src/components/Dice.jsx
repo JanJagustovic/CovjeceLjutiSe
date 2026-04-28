@@ -10,7 +10,7 @@ const PIPS = {
   6: [[25,22],[75,22],[25,50],[75,50],[25,78],[75,78]],
 };
 
-function DieFace({ value, size = 52 }) {
+function DieFace({ value, size = 36 }) {
   if (!value) return <div className="die-face die-face--empty" style={{ width: size, height: size }} />;
   return (
     <div className="die-face" style={{ width: size, height: size }}>

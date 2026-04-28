@@ -1,8 +1,8 @@
 .player-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-sm);
-  padding: var(--sp-sm) var(--sp-md);
+  gap: 4px;
+  padding: 5px var(--sp-md);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
 }
@@ -14,14 +14,14 @@
 }
 
 .panel-avatar {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: #fff;
   flex-shrink: 0;
   text-shadow: 0 1px 3px rgba(0,0,0,0.4);
@@ -34,13 +34,13 @@
 }
 
 .panel-name {
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .panel-status {
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   color: var(--text-secondary);
 }
 

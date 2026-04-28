@@ -10,10 +10,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--sp-sm) var(--sp-md);
+  padding: 5px var(--sp-md);
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  min-height: 36px;
 }
 
 .game-turn-label {
@@ -28,7 +29,6 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: var(--sp-xs);
   min-height: 0;
 }
 
@@ -44,5 +44,5 @@
   display: flex;
   align-items: center;
   gap: var(--sp-md);
-  padding: var(--sp-sm) var(--sp-md);
+  padding: 5px var(--sp-md);
 }
