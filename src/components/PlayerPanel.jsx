@@ -1,7 +1,7 @@
 import './PlayerPanel.css';
 
 const SPECIAL_ICONS = {
-  most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '🛑', zamjena: '🔄',
+  most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '⏸️', zamjena: '🔄',
 };
 
 const COLOR_HEX = {

@@ -62,11 +62,15 @@ export default function GameBoard() {
     ? validMoves.map(m => ({ figId: m.figId, playerColor: currentPlayer.color }))
     : [];
 
-  const validTargets = isMoving ? validMoves.map(m => {
-    if (m.type === 'move' || m.type === 'exit') return { ring: m.ring, idx: m.idx };
-    if (m.type === 'finish') return { lane: m.lane, color: m.color, slot: m.slot };
-    return null;
-  }).filter(Boolean) : [];
+  const validTargets = isMoving
+    ? validMoves.map(m => {
+        if (m.type === 'move' || m.type === 'exit') return { ring: m.ring, idx: m.idx };
+        if (m.type === 'finish') return { lane: m.lane, color: m.color, slot: m.slot };
+        return null;
+      }).filter(Boolean)
+    : isPlacing && state.lastMoveRing
+      ? [{ ring: state.lastMoveRing, idx: state.lastMoveIdx }]
+      : [];
 
   function handleFigureClick(playerColor, figId) {
     if (!isMoving) return;
@@ -105,20 +109,15 @@ export default function GameBoard() {
       }
     }
 
-    // Tap to place special
+    // Tap to place special — only allowed on the exact cell just landed on
     if (isPlacing && selectedSpecialType) {
-      if (cell.type === 'outer-path') {
-        const activeColors = state.players.map(p => p.color);
-        if (canPlaceSpecial('outer', cell.outerIdx, activeColors) && !state.specialsOnBoard[`outer-${cell.outerIdx}`]) {
-          placeSpecial('outer', cell.outerIdx, selectedSpecialType);
-          setSelectedSpecialType(null);
-        }
-      } else if (cell.type === 'inner-path') {
-        const activeColors = state.players.map(p => p.color);
-        if (canPlaceSpecial('inner', cell.innerIdx, activeColors) && !state.specialsOnBoard[`inner-${cell.innerIdx}`]) {
-          placeSpecial('inner', cell.innerIdx, selectedSpecialType);
-          setSelectedSpecialType(null);
-        }
+      const { lastMoveRing, lastMoveIdx } = state;
+      if (cell.type === 'outer-path' && lastMoveRing === 'outer' && cell.outerIdx === lastMoveIdx) {
+        placeSpecial('outer', lastMoveIdx, selectedSpecialType);
+        setSelectedSpecialType(null);
+      } else if (cell.type === 'inner-path' && lastMoveRing === 'inner' && cell.innerIdx === lastMoveIdx) {
+        placeSpecial('inner', lastMoveIdx, selectedSpecialType);
+        setSelectedSpecialType(null);
       }
     }
   }

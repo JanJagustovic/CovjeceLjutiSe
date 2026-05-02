@@ -9,7 +9,7 @@ const SPECIALS_STATIC = {
     { emoji: '🎲', name: 'KOCKA',   desc: 'Za figuricu koja je stala na kocku igrač odmah baca dvije kocke i pomiče tu figuricu. Ako nije moguće napraviti potez s tom figuricom tada je na redu idući igrač.' },
     { emoji: '⏪', name: 'REWIND',  desc: 'Figurica se na idućem potezu mora kretati suprotno od kazaljke na satu. Potez je moguć ako se figurica zaustavlja na polje koje je izlazak za tog igrača ili prije toga.' },
     { emoji: '💣', name: 'BOMBA',   desc: 'Figurica se vraća u svoj kvadrat HOME.' },
-    { emoji: '🛑', name: 'STOP',    desc: 'Figurica koja je stala na stop smije se kretati samo za jedno polje kada se na kocki dobije broj jedan.' },
+    { emoji: '⏸️', name: 'STOP',    desc: 'Figurica koja je stala na stop smije se kretati samo za jedno polje kada se na kocki dobije broj jedan.' },
     { emoji: '🔄', name: 'ZAMJENA', desc: 'Igrač odabire figuricu određene boje s kojom radi zamjenu. Boja se određuje bacanjem kocke i brojanjem od lijevog suigrača u smjeru kazaljke na satu (preskaču se sebe u brojanju). Ako nema slobodnih figurica te boje zamjena se ne izvršava.' },
   ],
   en: [
@@ -17,7 +17,7 @@ const SPECIALS_STATIC = {
     { emoji: '🎲', name: 'DICE',   desc: 'The player immediately rolls two dice and moves that piece by their sum. If no valid move exists, the next player takes their turn.' },
     { emoji: '⏪', name: 'REWIND', desc: 'The piece must move counter-clockwise on its next turn. The move is valid if the piece stops at or before the player\'s own finish entry.' },
     { emoji: '💣', name: 'BOMB',   desc: 'The piece returns to its HOME area.' },
-    { emoji: '🛑', name: 'STOP',   desc: 'The piece can only move one square when the die shows exactly 1.' },
+    { emoji: '⏸️', name: 'STOP',   desc: 'The piece can only move one square when the die shows exactly 1.' },
     { emoji: '🔄', name: 'SWAP',   desc: 'The player picks a color to swap with by rolling the die and counting clockwise from the left neighbor (skipping themselves). If no eligible pieces of that color exist, no swap occurs.' },
   ],
 };
@@ -28,7 +28,7 @@ const SPECIALS_DYNAMIC = {
     { emoji: '🎲', name: 'KOCKA',   desc: 'Za figuricu koja je stala na kocku igrač odmah baca dvije kocke i pomiče tu figuricu. Ako nije moguće napraviti potez s tom figuricom tada je na redu idući igrač.' },
     { emoji: '⏪', name: 'REWIND',  desc: 'Figurica se na idućem potezu mora kretati suprotno od kazaljke na satu. Potez je moguć ako se figurica zaustavlja na polje koje je izlazak za tog igrača ili prije toga.' },
     { emoji: '💣', name: 'BOMBA',   desc: 'Figurica koja stane na bombu vraća se u svoj kvadratić HOME i igrač koji je postavio bombu uzima je natrag za ponovno postavljanje.' },
-    { emoji: '🛑', name: 'STOP',    desc: 'Figurica koja je stala na stop smije se kretati samo za jedno polje kada se na kocki dobije broj jedan.' },
+    { emoji: '⏸️', name: 'STOP',    desc: 'Figurica koja je stala na stop smije se kretati samo za jedno polje kada se na kocki dobije broj jedan.' },
     { emoji: '🔄', name: 'ZAMJENA', desc: 'Igrač koji figuricom stane na to mjesto bira figuricu boje igrača koji je postavio to posebno polje. Ako nema slobodnih figurica te boje zamjena se ne izvršava.' },
   ],
   en: [
@@ -36,7 +36,7 @@ const SPECIALS_DYNAMIC = {
     { emoji: '🎲', name: 'DICE',   desc: 'The player immediately rolls two dice and moves that piece by their sum. If no valid move exists, the next player takes their turn.' },
     { emoji: '⏪', name: 'REWIND', desc: 'The piece must move counter-clockwise on its next turn. The move is valid if the piece stops at or before the player\'s own finish entry.' },
     { emoji: '💣', name: 'BOMB',   desc: 'The piece returns to HOME and the player who placed the bomb reclaims it for future placement.' },
-    { emoji: '🛑', name: 'STOP',   desc: 'The piece can only move one square when the die shows exactly 1.' },
+    { emoji: '⏸️', name: 'STOP',   desc: 'The piece can only move one square when the die shows exactly 1.' },
     { emoji: '🔄', name: 'SWAP',   desc: 'The landing player swaps with a piece belonging to the player who placed this square. If no eligible pieces exist, no swap occurs.' },
   ],
 };

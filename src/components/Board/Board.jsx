@@ -6,7 +6,7 @@ const SPECIAL_ICONS = {
   kocka:   '🎲',
   rewind:  '⏪',
   bomba:   '💣',
-  stop:    '🛑',
+  stop:    '⏸️',
   zamjena: '🔄',
 };
 
@@ -129,22 +129,25 @@ export default function Board({
       const spawn = spawnMap[key];
       let content = null;
       let specialIcon = null;
+      let specialBadge = false;
 
       if (cell.type === 'outer-path') {
         const spKey = `outer-${cell.outerIdx}`;
+        const figs = getFiguresOnCell('outer', cell.outerIdx, players);
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
+          specialBadge = figs.length > 0;
         }
-        const figs = getFiguresOnCell('outer', cell.outerIdx, players);
         const isTarget = validTargets?.some(t => t.ring === 'outer' && t.idx === cell.outerIdx);
         if (isTarget) className += ' board-cell--target';
         content = renderFigures(figs);
       } else if (cell.type === 'inner-path') {
         const spKey = `inner-${cell.innerIdx}`;
+        const figs = getFiguresOnCell('inner', cell.innerIdx, players);
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
+          specialBadge = figs.length > 0;
         }
-        const figs = getFiguresOnCell('inner', cell.innerIdx, players);
         const isTarget = validTargets?.some(t => t.ring === 'inner' && t.idx === cell.innerIdx);
         if (isTarget) className += ' board-cell--target';
         content = renderFigures(figs);
@@ -189,7 +192,11 @@ export default function Board({
               {spawn.dir}
             </span>
           )}
-          {specialIcon && <span className="special-icon">{specialIcon}</span>}
+          {specialIcon && (
+            <span className={`special-icon${specialBadge ? ' special-icon--badge' : ''}`}>
+              {specialIcon}
+            </span>
+          )}
           {content}
         </div>
       );

@@ -158,12 +158,15 @@ export function getValidMoves(state, diceVal) {
           if (!occupant || occupant.player.color !== player.color) {
             moves.push({ figId: fig.id, type: 'move', ring, idx: targetIdx });
           }
-        } else if (diceVal === stepsToFinish + 1) {
-          if (!findFigureInFinish(state.players, player.color, 'finish', 1)) {
-            moves.push({ figId: fig.id, type: 'finish', lane: 'finish', color: player.color, slot: 1 });
+        } else {
+          const slot = diceVal - stepsToFinish;
+          if (slot >= 1 && slot <= 4) {
+            if (!findFigureInFinish(state.players, player.color, 'finish', slot)) {
+              moves.push({ figId: fig.id, type: 'finish', lane: 'finish', color: player.color, slot });
+            }
           }
+          // else overshoot (slot > 4) — no valid move
         }
-        // else overshoot — no valid move
       } else {
         // Outer ring: loop indefinitely, no finish access
         const targetIdx = advanceCW(idx, diceVal, len);
@@ -522,8 +525,12 @@ function reducer(state, action) {
         const stepsToFinish = (pd.finishEntryIdx - trigger.idx + len) % len;
         if (total <= stepsToFinish) {
           fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
-        } else if (total === stepsToFinish + 1) {
-          fig.pos = { lane: 'finish', color: player.color, slot: 1 };
+        } else {
+          const slot = total - stepsToFinish;
+          if (slot >= 1 && slot <= 4) {
+            fig.pos = { lane: 'finish', color: player.color, slot };
+          }
+          // else overshoot — figure stays put
         }
       } else {
         fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
