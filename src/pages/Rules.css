@@ -50,12 +50,64 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.rules-para {
+.rules-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+}
+
+.rules-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: var(--sp-sm) var(--sp-md);
   font-size: 0.9rem;
   line-height: 1.65;
   color: var(--text-primary);
 }
 
-.rules-para strong {
+.rules-rule--sub {
+  margin-left: var(--sp-md);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+}
+
+.rules-rule-num {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  min-width: 2.4rem;
+  flex-shrink: 0;
+}
+
+
+.rules-specials {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-sm);
+  padding-left: var(--sp-sm);
+}
+
+.rules-special-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: var(--sp-sm) var(--sp-md);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.rules-special-emoji {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  width: 1.8rem;
+  text-align: center;
+}
+
+.rules-special-text strong {
   color: var(--accent);
 }

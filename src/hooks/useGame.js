@@ -34,13 +34,19 @@ function initState(setupPlayers) {
     secondDiceValue: null,
     rollsLeft: 1,
     bonusRoll: false,
-    phase: 'rolling', // rolling | choosing-exit | moving | placing-special | duel | special-trigger | game-over
-    specialsOnBoard: {}, // key: "ring-idx" → { type, placedBy }
-    duelState: null,     // { atkColor, defColor, pos, atkRoll, defRoll }
-    specialTrigger: null,// { type, ring, idx, figId, playerColor }
-    exitChoice: null,    // { figId, playerColor } — waiting for ring choice
+    phase: 'initial-roll',
+    specialsOnBoard: {},
+    duelState: null,
+    specialTrigger: null,
+    exitChoice: null,
     winner: null,
     log: [],
+    // Initial roll state (rule 2)
+    initialRollOrder: setupPlayers.map(sp => sp.color),
+    initialRolls: {},     // colorKey → value rolled this round
+    initialRollIdx: 0,    // index into initialRollOrder of who rolls next
+    initialRollWinner: null,  // set when one player wins
+    initialRollTied: false,   // set when round ends in a tie
   };
 }
 
@@ -64,17 +70,13 @@ function figureInFinish(pos, colorKey, lane, slot) {
 }
 
 function isAllStuck(player) {
-  // All figures in HOME, OR consecutively in finish from slot 4 downward
   const figs = player.figures;
   const atHome = figs.filter(f => f.pos === 'home').length;
   if (atHome === 4) return true;
-  // Check if remaining figures are in finish slots 4,3,2,...
-  const finishFigs = figs.filter(f => typeof f.pos === 'object' && (f.pos.lane === 'inner' || f.pos.lane === 'outer'));
+  const finishFigs = figs.filter(f => typeof f.pos === 'object' && f.pos.lane === 'finish');
   const pathFigs = figs.filter(f => typeof f.pos === 'object' && f.pos.ring);
   if (pathFigs.length > 0) return false;
-  // All non-home figures are in finish
   const slots = finishFigs.map(f => f.pos.slot).sort((a, b) => b - a);
-  // Must be consecutive from 4 downward
   for (let i = 0; i < slots.length; i++) {
     if (slots[i] !== 4 - i) return false;
   }
@@ -83,7 +85,7 @@ function isAllStuck(player) {
 
 function isWinner(player) {
   return player.figures.every(f =>
-    typeof f.pos === 'object' && (f.pos.lane === 'inner' || f.pos.lane === 'outer')
+    typeof f.pos === 'object' && f.pos.lane === 'finish'
   );
 }
 
@@ -123,10 +125,12 @@ export function getValidMoves(state, diceVal) {
       if (diceVal === 6) {
         // Can exit to outer or inner ring
         const pd = playerDef(player.color);
-        if (!findFigureOnCell(state.players, 'outer', pd.exitOuter)) {
+        const outerOcc = findFigureOnCell(state.players, 'outer', pd.exitOuter);
+        if (!outerOcc || outerOcc.player.color !== player.color) {
           moves.push({ figId: fig.id, type: 'exit', ring: 'outer', idx: pd.exitOuter });
         }
-        if (!findFigureOnCell(state.players, 'inner', pd.exitInner)) {
+        const innerOcc = findFigureOnCell(state.players, 'inner', pd.exitInner);
+        if (!innerOcc || innerOcc.player.color !== player.color) {
           moves.push({ figId: fig.id, type: 'exit', ring: 'inner', idx: pd.exitInner });
         }
       }
@@ -137,34 +141,36 @@ export function getValidMoves(state, diceVal) {
       const { ring, idx } = fig.pos;
       const len = pathLen(ring);
       const pd = playerDef(player.color);
-      const finishEntryIdx = ring === 'outer' ? pd.outerFinishEntryIdx : pd.innerFinishEntryIdx;
-      const stepsToFinish = (finishEntryIdx - idx + len) % len;
 
       if (fig.rewindNext) {
-        // REWIND: move backward
         const targetIdx = advanceCCW(idx, diceVal, len);
         if (!findFigureOnCell(state.players, ring, targetIdx)) {
-          // Can't enter finish going backward
           moves.push({ figId: fig.id, type: 'move', ring, idx: targetIdx, rewind: true });
         }
         return;
       }
 
-      if (diceVal <= stepsToFinish) {
-        // Stay on path
+      if (ring === 'inner') {
+        const stepsToFinish = (pd.finishEntryIdx - idx + len) % len;
+        if (diceVal <= stepsToFinish) {
+          const targetIdx = advanceCW(idx, diceVal, len);
+          const occupant = findFigureOnCell(state.players, ring, targetIdx);
+          if (!occupant || occupant.player.color !== player.color) {
+            moves.push({ figId: fig.id, type: 'move', ring, idx: targetIdx });
+          }
+        } else if (diceVal === stepsToFinish + 1) {
+          if (!findFigureInFinish(state.players, player.color, 'finish', 1)) {
+            moves.push({ figId: fig.id, type: 'finish', lane: 'finish', color: player.color, slot: 1 });
+          }
+        }
+        // else overshoot — no valid move
+      } else {
+        // Outer ring: loop indefinitely, no finish access
         const targetIdx = advanceCW(idx, diceVal, len);
         const occupant = findFigureOnCell(state.players, ring, targetIdx);
         if (!occupant || occupant.player.color !== player.color) {
           moves.push({ figId: fig.id, type: 'move', ring, idx: targetIdx });
         }
-      } else if (diceVal === stepsToFinish + 1) {
-        // Enter finish slot 1 (closest to path)
-        if (!findFigureInFinish(state.players, player.color, ring, 1)) {
-          moves.push({ figId: fig.id, type: 'finish', lane: ring, color: player.color, slot: 1 });
-        }
-      } else {
-        // Overshoot — move normally but stop before finish entry
-        // (figure stays if can't complete move — no move available)
       }
       return;
     }
@@ -279,10 +285,12 @@ function applyMove(state, move) {
 
 function afterMove(state, move) {
   const player = state.players[state.currentPlayerIndex];
-  // Check if player can place a special
   const hasSpecials = player.specialsHeld.length > 0;
+  const spKey = `${move.ring}-${move.idx}`;
+  const activeColors = state.players.map(p => p.color);
   const validPlacement = hasSpecials && (move.type === 'move' || move.type === 'exit') &&
-    canPlaceSpecial(move.ring, move.idx, player.color);
+    !state.specialsOnBoard[spKey] &&
+    canPlaceSpecial(move.ring, move.idx, activeColors);
 
   if (validPlacement) {
     return { ...state, phase: 'placing-special', lastMoveRing: move.ring, lastMoveIdx: move.idx };
@@ -357,7 +365,7 @@ function reducer(state, action) {
             return { ...state, diceValue: val, rollsLeft: newRollsLeft, phase: 'moving', bonusRoll: false };
           }
           if (newRollsLeft <= 0) {
-            return advanceTurn({ ...state, diceValue: val, rollsLeft: 0 });
+            return { ...state, diceValue: val, rollsLeft: 0, phase: 'no-moves' };
           }
           return { ...state, diceValue: val, rollsLeft: newRollsLeft };
         }
@@ -371,7 +379,7 @@ function reducer(state, action) {
         if (bonus) {
           return { ...state, diceValue: val, bonusRoll: true, phase: 'rolling' };
         }
-        return addLog(advanceTurn({ ...state, diceValue: val, bonusRoll: false }), 'Nema poteza, sljedeći igrač.');
+        return { ...state, diceValue: val, bonusRoll: false, phase: 'no-moves' };
       }
 
       return { ...state, diceValue: val, bonusRoll: bonus, phase: 'moving' };
@@ -447,11 +455,17 @@ function reducer(state, action) {
       const loserFig = loserPlayer.figures.find(f => f.id === loserFigId);
       loserFig.pos = 'home';
 
+      const attackerWon = atkRoll > defRoll;
       const newState = { ...state, players: newPlayers, duelState: null };
 
-      // Check special square
+      if (!attackerWon) {
+        // Attacker lost — figure went home, no placement, no bonus roll
+        return advanceTurn(newState);
+      }
+
+      // Attacker won — check special square on the duel cell
       const spKey = `${duelState.ring}-${duelState.idx}`;
-      if (newState.specialsOnBoard[spKey] && loserColor !== state.players[state.currentPlayerIndex].color) {
+      if (newState.specialsOnBoard[spKey]) {
         const trigger = {
           type: newState.specialsOnBoard[spKey].type,
           ring: duelState.ring,
@@ -503,19 +517,23 @@ function reducer(state, action) {
       const mover = newPlayers.find(p => p.color === trigger.playerColor);
       const fig = mover.figures.find(f => f.id === trigger.figId);
       const len = pathLen(trigger.ring);
-      const finishEntry = trigger.ring === 'outer' ? pd.outerFinishEntryIdx : pd.innerFinishEntryIdx;
-      const stepsToFinish = (finishEntry - trigger.idx + len) % len;
 
-      if (total <= stepsToFinish) {
+      if (trigger.ring === 'inner') {
+        const stepsToFinish = (pd.finishEntryIdx - trigger.idx + len) % len;
+        if (total <= stepsToFinish) {
+          fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
+        } else if (total === stepsToFinish + 1) {
+          fig.pos = { lane: 'finish', color: player.color, slot: 1 };
+        }
+      } else {
         fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
-      } else if (total === stepsToFinish + 1) {
-        fig.pos = { lane: trigger.ring, color: player.color, slot: 1 };
       }
 
+      const finalIdx = typeof fig.pos === 'object' && fig.pos.ring ? fig.pos.idx : trigger.idx;
       return afterMove({
         ...state, players: newPlayers, specialTrigger: null,
         secondDiceValue: d1 * 10 + d2,
-      }, { type: 'move', ring: trigger.ring, idx: fig.pos.idx ?? trigger.idx });
+      }, { type: 'move', ring: trigger.ring, idx: finalIdx });
     }
 
     case 'RESOLVE_ZAMJENA': {
@@ -536,6 +554,10 @@ function reducer(state, action) {
         { type: 'move', ring: trigger.ring, idx: trigger.idx });
     }
 
+    case 'END_TURN': {
+      return advanceTurn(state);
+    }
+
     case 'PICKUP_SPECIAL': {
       // When player rolls 6 and picks up a special from a cell (rule 9d)
       const { ring, idx } = action;
@@ -551,6 +573,45 @@ function reducer(state, action) {
         return p;
       });
       return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'rolling', diceValue: null, rollsLeft: 1 };
+    }
+
+    case 'INITIAL_ROLL': {
+      const { initialRollOrder, initialRollIdx, initialRolls } = state;
+      if (initialRollIdx >= initialRollOrder.length) return state;
+      const color = initialRollOrder[initialRollIdx];
+      const val = rollD6();
+      const newRolls = { ...initialRolls, [color]: val };
+      const nextIdx = initialRollIdx + 1;
+
+      if (nextIdx < initialRollOrder.length) {
+        return { ...state, initialRolls: newRolls, initialRollIdx: nextIdx };
+      }
+
+      // All players in this round have rolled
+      const maxVal = Math.max(...Object.values(newRolls));
+      const tied = initialRollOrder.filter(c => newRolls[c] === maxVal);
+
+      if (tied.length === 1) {
+        return { ...state, initialRolls: newRolls, initialRollIdx: nextIdx, initialRollWinner: tied[0] };
+      }
+      // Tie — show results then wait for user to continue
+      return { ...state, initialRolls: newRolls, initialRollIdx: nextIdx, initialRollOrder: tied, initialRollTied: true };
+    }
+
+    case 'CONTINUE_AFTER_TIE': {
+      return { ...state, initialRolls: {}, initialRollIdx: 0, initialRollTied: false };
+    }
+
+    case 'START_GAME': {
+      const winnerIdx = state.players.findIndex(p => p.color === state.initialRollWinner);
+      const winner = state.players[winnerIdx];
+      return {
+        ...state,
+        phase: 'rolling',
+        currentPlayerIndex: winnerIdx,
+        rollsLeft: isAllStuck(winner) ? 3 : 1,
+        initialRollWinner: null,
+      };
     }
 
     default:
@@ -574,6 +635,10 @@ export function useGame(setupPlayers) {
     dispatch({ type: 'RESOLVE_KOCKA', trigger }), []);
   const resolveZamjena = useCallback((trigger, targetColor, targetFigId) =>
     dispatch({ type: 'RESOLVE_ZAMJENA', trigger, targetColor, targetFigId }), []);
+  const endTurn = useCallback(() => dispatch({ type: 'END_TURN' }), []);
+  const initialRoll = useCallback(() => dispatch({ type: 'INITIAL_ROLL' }), []);
+  const continueAfterTie = useCallback(() => dispatch({ type: 'CONTINUE_AFTER_TIE' }), []);
+  const startGame = useCallback(() => dispatch({ type: 'START_GAME' }), []);
 
   const validMoves = state.phase === 'moving'
     ? getValidMoves(state, state.diceValue)
@@ -593,5 +658,9 @@ export function useGame(setupPlayers) {
     resolveMost,
     resolveKocka,
     resolveZamjena,
+    endTurn,
+    initialRoll,
+    continueAfterTie,
+    startGame,
   };
 }

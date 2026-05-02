@@ -6,7 +6,7 @@ const SPECIAL_ICONS = {
 
 const COLOR_HEX = {
   red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-  cyan: '#00acc1', purple: '#8e24aa', magenta: '#d81b60', orange: '#fb8c00',
+  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
 };
 
 export default function PlayerPanel({

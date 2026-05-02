@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { PLAYER_ORDER } from '../data/boardLayout';
 import './GameSetup.css';
 
-const ALL_COLORS = ['red', 'yellow', 'blue', 'green', 'cyan', 'purple', 'magenta', 'orange'];
+const ALL_COLORS = PLAYER_ORDER; // red, yellow, blue, magenta, orange, purple, cyan, green
 
 const COLOR_HEX = {
   red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-  cyan: '#00acc1', purple: '#8e24aa', magenta: '#d81b60', orange: '#fb8c00',
+  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
 };
 
 function initPlayers(count) {

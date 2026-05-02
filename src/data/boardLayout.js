@@ -54,112 +54,92 @@ export function advanceCCW(idx, steps, len) {
 
 // --- Player definitions ---
 // exitOuter / exitInner: index on path where figure appears when leaving HOME
-// innerFinishEntryIdx: index on INNER_PATH one step before the finish lane
-//   (when a figure is HERE and rolls, next step goes into finishCells[0])
-// outerFinishEntryIdx: same but on OUTER_PATH
-// finishCells: [{r,c}] length 4, index 0 = slot closest to path (slot 4), index 3 = deepest (slot 1)
+// finishEntryIdx: index on INNER_PATH where figure is standing when it can enter the finish lane
+//   (figure at this index rolls exact 1 → enters finishCells[0], slot 1)
+// finishCells: [{r,c}] length 4, slot 1 = closest to path, slot 4 = deepest (win position)
 // homeCells: [{r,c}] the 4 cells in HOME area
 // color: CSS hex
-// mostPairs: [{outerIdx, innerIdx}] — pairs of (outer path index, inner path index)
-//   that are geometrically parallel (1 cell apart) — natural MOST bridge positions
+// mostPairs: [{outerIdx, innerIdx}] — pairs of outer/inner path indices that are 1 cell apart
 
 export const PLAYERS = {
   red: {
     color: '#e53935',
     colorVar: '--color-red',
     homeCells: [{ r: 1, c: 1 }, { r: 1, c: 2 }, { r: 2, c: 1 }, { r: 2, c: 2 }],
-    exitOuter: 1,           // outer[1]  = [0,1]
-    exitInner: 1,           // inner[1]  = [3,4]
-    outerFinishEntryIdx: 71, // outer[71] = [1,0]  → enters outerFinishCells
-    innerFinishEntryIdx: 47, // inner[47] = [4,3]  → enters innerFinishCells
-    // outer finish lane: row 2, cols 3-6 (between rings, top-left)
-    outerFinishCells: [{ r: 2, c: 3 }, { r: 2, c: 4 }, { r: 2, c: 5 }, { r: 2, c: 6 }],
-    // inner finish lane: row 4, cols 4-7 (inside inner ring)
-    innerFinishCells: [{ r: 4, c: 4 }, { r: 4, c: 5 }, { r: 4, c: 6 }, { r: 4, c: 7 }],
+    exitOuter: 69,       // outer[69] = [3,0]  (col 1, row 4 — 1-indexed)
+    exitInner: 0,        // inner[0]  = [3,3]  (top-left corner of inner ring)
+    finishEntryIdx: 47,  // inner[47] = [4,3] → 1 step before exit
+    finishCells: [{ r: 4, c: 4 }, { r: 5, c: 4 }, { r: 6, c: 4 }, { r: 7, c: 4 }],
     mostPairs: [{ outerIdx: 71, innerIdx: 47 }, { outerIdx: 0, innerIdx: 0 }],
   },
   yellow: {
     color: '#fdd835',
     colorVar: '--color-yellow',
-    homeCells: [{ r: 1, c: 9 }, { r: 1, c: 10 }, { r: 2, c: 9 }, { r: 2, c: 10 }],
-    exitOuter: 9,
-    exitInner: 7,           // inner[7] = [3,10]
-    outerFinishEntryIdx: 8,
-    innerFinishEntryIdx: 6, // inner[6] = [3,9]
-    outerFinishCells: [{ r: 2, c: 7 }, { r: 2, c: 8 }, { r: 2, c: 9 }, { r: 2, c: 10 }],
-    innerFinishCells: [{ r: 4, c: 9 }, { r: 5, c: 9 }, { r: 6, c: 9 }, { r: 7, c: 9 }],
+    homeCells: [{ r: 1, c: 10 }, { r: 1, c: 11 }, { r: 2, c: 10 }, { r: 2, c: 11 }],
+    exitOuter: 9,        // outer[9]  = [0,9]   (row 1, col 10)
+    exitInner: 6,        // inner[6]  = [3,9]   (row 4, col 10)
+    finishEntryIdx: 5,   // inner[5]  = [3,8]   (one step before exit, CW)
+    finishCells: [{ r: 4, c: 8 }, { r: 5, c: 8 }, { r: 6, c: 8 }, { r: 7, c: 8 }],
     mostPairs: [{ outerIdx: 8, innerIdx: 6 }, { outerIdx: 9, innerIdx: 7 }],
   },
   blue: {
     color: '#1e88e5',
     colorVar: '--color-blue',
     homeCells: [{ r: 1, c: 16 }, { r: 1, c: 17 }, { r: 2, c: 16 }, { r: 2, c: 17 }],
-    exitOuter: 17,
-    exitInner: 11,          // inner[11] = [3,14]
-    outerFinishEntryIdx: 16,
-    innerFinishEntryIdx: 10,
-    outerFinishCells: [{ r: 2, c: 12 }, { r: 2, c: 13 }, { r: 2, c: 14 }, { r: 2, c: 15 }],
-    innerFinishCells: [{ r: 4, c: 14 }, { r: 5, c: 14 }, { r: 6, c: 14 }, { r: 7, c: 14 }],
+    exitOuter: 15,       // outer[15] = [0,15]  (row 1, col 16)
+    exitInner: 12,       // inner[12] = [3,15]  (row 4, col 16)
+    finishEntryIdx: 11,  // inner[11] = [3,14]
+    finishCells: [{ r: 4, c: 14 }, { r: 4, c: 13 }, { r: 4, c: 12 }, { r: 4, c: 11 }],
     mostPairs: [{ outerIdx: 16, innerIdx: 10 }, { outerIdx: 17, innerIdx: 11 }],
   },
   magenta: {
-    color: '#d81b60',
+    color: '#f06292',
     colorVar: '--color-magenta',
-    homeCells: [{ r: 9, c: 16 }, { r: 9, c: 17 }, { r: 10, c: 16 }, { r: 10, c: 17 }],
-    exitOuter: 27,          // outer[27] = [9,18]
-    exitInner: 19,          // inner[19] = [10,15]
-    outerFinishEntryIdx: 26,
-    innerFinishEntryIdx: 18, // inner[18] = [9,15]
-    outerFinishCells: [{ r: 7, c: 16 }, { r: 7, c: 17 }, { r: 8, c: 16 }, { r: 8, c: 17 }],
-    innerFinishCells: [{ r: 9, c: 14 }, { r: 9, c: 13 }, { r: 9, c: 12 }, { r: 9, c: 11 }],
+    homeCells: [{ r: 10, c: 16 }, { r: 10, c: 17 }, { r: 11, c: 16 }, { r: 11, c: 17 }],
+    exitOuter: 27,       // outer[27] = [9,18]  (row 10, col 19)
+    exitInner: 18,       // inner[18] = [9,15]  (row 10, col 16)
+    finishEntryIdx: 17,  // inner[17] = [8,15]  (one step before exit, CW)
+    finishCells: [{ r: 8, c: 14 }, { r: 8, c: 13 }, { r: 8, c: 12 }, { r: 8, c: 11 }],
     mostPairs: [{ outerIdx: 26, innerIdx: 18 }, { outerIdx: 27, innerIdx: 19 }],
   },
   orange: {
     color: '#fb8c00',
     colorVar: '--color-orange',
     homeCells: [{ r: 16, c: 16 }, { r: 16, c: 17 }, { r: 17, c: 16 }, { r: 17, c: 17 }],
-    exitOuter: 37,          // outer[37] = [18,17]
-    exitInner: 25,          // inner[25] = [15,14]
-    outerFinishEntryIdx: 36,
-    innerFinishEntryIdx: 24, // inner[24] = [15,15]  ← corner; figure turns left
-    outerFinishCells: [{ r: 16, c: 14 }, { r: 16, c: 13 }, { r: 16, c: 12 }, { r: 16, c: 11 }],
-    innerFinishCells: [{ r: 14, c: 14 }, { r: 14, c: 13 }, { r: 14, c: 12 }, { r: 14, c: 11 }],
+    exitOuter: 33,       // outer[33] = [15,18]  (row 16, col 19)
+    exitInner: 24,       // inner[24] = [15,15]  (row 16, col 16)
+    finishEntryIdx: 23,  // inner[23] = [14,15]  (one step before exit, CW)
+    finishCells: [{ r: 14, c: 14 }, { r: 13, c: 14 }, { r: 12, c: 14 }, { r: 11, c: 14 }],
     mostPairs: [{ outerIdx: 36, innerIdx: 24 }, { outerIdx: 37, innerIdx: 25 }],
   },
   purple: {
     color: '#8e24aa',
     colorVar: '--color-purple',
-    homeCells: [{ r: 16, c: 9 }, { r: 16, c: 10 }, { r: 17, c: 9 }, { r: 17, c: 10 }],
-    exitOuter: 45,          // outer[45] = [18,9]
-    exitInner: 31,          // inner[31] = [15,8]
-    outerFinishEntryIdx: 44,
-    innerFinishEntryIdx: 30, // inner[30] = [15,9]
-    outerFinishCells: [{ r: 16, c: 8 }, { r: 16, c: 9 }, { r: 16, c: 10 }, { r: 16, c: 11 }],
-    innerFinishCells: [{ r: 14, c: 9 }, { r: 13, c: 9 }, { r: 12, c: 9 }, { r: 11, c: 9 }],
+    homeCells: [{ r: 16, c: 7 }, { r: 16, c: 8 }, { r: 17, c: 7 }, { r: 17, c: 8 }],
+    exitOuter: 45,       // outer[45] = [18,9]   (row 19, col 10)
+    exitInner: 30,       // inner[30] = [15,9]   (row 16, col 10)
+    finishEntryIdx: 29,  // inner[29] = [15,10]  (one step before exit, CW)
+    finishCells: [{ r: 14, c: 10 }, { r: 13, c: 10 }, { r: 12, c: 10 }, { r: 11, c: 10 }],
     mostPairs: [{ outerIdx: 44, innerIdx: 30 }, { outerIdx: 45, innerIdx: 31 }],
   },
   cyan: {
-    color: '#00acc1',
+    color: '#00838f',
     colorVar: '--color-cyan',
     homeCells: [{ r: 16, c: 1 }, { r: 16, c: 2 }, { r: 17, c: 1 }, { r: 17, c: 2 }],
-    exitOuter: 55,          // outer[55] = [17,0]
-    exitInner: 37,          // inner[37] = [14,3]
-    outerFinishEntryIdx: 54,
-    innerFinishEntryIdx: 36, // inner[36] = [15,3]
-    outerFinishCells: [{ r: 16, c: 3 }, { r: 16, c: 4 }, { r: 16, c: 5 }, { r: 16, c: 6 }],
-    innerFinishCells: [{ r: 14, c: 4 }, { r: 13, c: 4 }, { r: 12, c: 4 }, { r: 11, c: 4 }],
+    exitOuter: 51,       // outer[51] = [18,3]   (row 19, col 4)
+    exitInner: 36,       // inner[36] = [15,3]   (row 16, col 4)
+    finishEntryIdx: 35,  // inner[35] = [15,4]   (one step before exit, CW)
+    finishCells: [{ r: 14, c: 4 }, { r: 14, c: 5 }, { r: 14, c: 6 }, { r: 14, c: 7 }],
     mostPairs: [{ outerIdx: 54, innerIdx: 36 }, { outerIdx: 55, innerIdx: 37 }],
   },
   green: {
     color: '#43a047',
     colorVar: '--color-green',
-    homeCells: [{ r: 9, c: 1 }, { r: 9, c: 2 }, { r: 10, c: 1 }, { r: 10, c: 2 }],
-    exitOuter: 63,          // outer[63] = [9,0]
-    exitInner: 43,          // inner[43] = [8,3]
-    outerFinishEntryIdx: 62,
-    innerFinishEntryIdx: 42, // inner[42] = [9,3]
-    outerFinishCells: [{ r: 8, c: 1 }, { r: 8, c: 2 }, { r: 7, c: 1 }, { r: 7, c: 2 }],
-    innerFinishCells: [{ r: 9, c: 4 }, { r: 9, c: 5 }, { r: 9, c: 6 }, { r: 9, c: 7 }],
+    homeCells: [{ r: 7, c: 1 }, { r: 7, c: 2 }, { r: 8, c: 1 }, { r: 8, c: 2 }],
+    exitOuter: 63,       // outer[63] = [9,0]    (row 10, col 1)
+    exitInner: 42,       // inner[42] = [9,3]    (row 10, col 4)
+    finishEntryIdx: 41,  // inner[41] = [10,3]   (one step before exit, CW)
+    finishCells: [{ r: 10, c: 4 }, { r: 10, c: 5 }, { r: 10, c: 6 }, { r: 10, c: 7 }],
     mostPairs: [{ outerIdx: 62, innerIdx: 42 }, { outerIdx: 63, innerIdx: 43 }],
   },
 };
@@ -193,14 +173,11 @@ function buildGrid() {
 
   // Player HOME cells, finish cells
   Object.entries(PLAYERS).forEach(([colorKey, p]) => {
-    p.homeCells.forEach(({ r, c }) => {
-      grid[r][c] = { type: 'home', color: colorKey };
+    p.homeCells.forEach(({ r, c }, i) => {
+      grid[r][c] = { type: 'home', color: colorKey, homeSlot: i };
     });
-    p.outerFinishCells.forEach(({ r, c }, slot) => {
-      grid[r][c] = { type: 'outer-finish', color: colorKey, slot: slot + 1 };
-    });
-    p.innerFinishCells.forEach(({ r, c }, slot) => {
-      grid[r][c] = { type: 'inner-finish', color: colorKey, slot: slot + 1 };
+    p.finishCells.forEach(({ r, c }, i) => {
+      grid[r][c] = { type: 'finish', color: colorKey, slot: i + 1 };
     });
   });
 
@@ -209,12 +186,10 @@ function buildGrid() {
 
 export const GRID = buildGrid();
 
-// Helper: check if a position is the finish entry for a player on a given ring
+// Helper: check if a position is the finish entry for a player (inner ring only)
 export function isFinishEntry(ring, idx, colorKey) {
-  const p = PLAYERS[colorKey];
-  if (ring === 'outer') return idx === p.outerFinishEntryIdx;
-  if (ring === 'inner') return idx === p.innerFinishEntryIdx;
-  return false;
+  if (ring !== 'inner') return false;
+  return idx === PLAYERS[colorKey].finishEntryIdx;
 }
 
 // Calculate the number of steps between two path indices (clockwise)
@@ -235,17 +210,17 @@ export function distributeSpecials(numPlayers) {
   return hand;
 }
 
-// Check if a cell can receive a special square (rule 9b)
-// cell: {type, color, ...}; ring: 'outer'|'inner'; idx: number; playerColor: string
-export function canPlaceSpecial(ring, idx, playerColor) {
+// Check if a cell can receive a special square (rule 9b).
+// activeColors: array of color strings for players currently in the game.
+// Blocked only if the cell is a spawn point (exitOuter/exitInner) of an active player.
+export function canPlaceSpecial(ring, idx, activeColors) {
   const { r, c } = ring === 'outer' ? OUTER_PATH[idx] : INNER_PATH[idx];
   const cell = GRID[r][c];
-  // Must be a plain path cell (no existing special, no finish entry for anyone)
   if (cell.type !== 'outer-path' && cell.type !== 'inner-path') return false;
-  // Not a finish entry for any color
-  for (const [, p] of Object.entries(PLAYERS)) {
-    if (ring === 'outer' && idx === p.outerFinishEntryIdx) return false;
-    if (ring === 'inner' && idx === p.innerFinishEntryIdx) return false;
+  const colors = activeColors || Object.keys(PLAYERS);
+  for (const color of colors) {
+    const p = PLAYERS[color];
+    if (!p) continue;
     if (ring === 'outer' && idx === p.exitOuter) return false;
     if (ring === 'inner' && idx === p.exitInner) return false;
   }

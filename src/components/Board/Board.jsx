@@ -1,4 +1,4 @@
-import { GRID, OUTER_PATH, INNER_PATH, PLAYERS } from '../../data/boardLayout.js';
+import { GRID, PLAYERS, OUTER_PATH, INNER_PATH } from '../../data/boardLayout.js';
 import './Board.css';
 
 const SPECIAL_ICONS = {
@@ -12,10 +12,33 @@ const SPECIAL_ICONS = {
 
 const COLOR_HEX = {
   red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-  cyan: '#00acc1', purple: '#8e24aa', magenta: '#d81b60', orange: '#fb8c00',
+  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
 };
 
-function getFiguresOnCell(figures, ring, idx, allPlayers) {
+function getArrowDir(path, idx) {
+  const curr = path[idx];
+  const next = path[(idx + 1) % path.length];
+  if (next.r > curr.r) return '↓';
+  if (next.r < curr.r) return '↑';
+  if (next.c > curr.c) return '→';
+  return '←';
+}
+
+function buildSpawnMap(activePlayers) {
+  const map = {};
+  activePlayers.forEach(player => {
+    const pd = PLAYERS[player.color];
+    if (!pd) return;
+    const outerCell = OUTER_PATH[pd.exitOuter];
+    map[`${outerCell.r}-${outerCell.c}`] = { color: player.color, dir: getArrowDir(OUTER_PATH, pd.exitOuter) };
+    const innerCell = INNER_PATH[pd.exitInner];
+    map[`${innerCell.r}-${innerCell.c}`] = { color: player.color, dir: getArrowDir(INNER_PATH, pd.exitInner) };
+  });
+  return map;
+}
+
+function getFiguresOnCell(ring, idx, allPlayers) {
+  if (!Array.isArray(allPlayers)) return [];
   const result = [];
   allPlayers.forEach(player => {
     player.figures.forEach(fig => {
@@ -28,6 +51,7 @@ function getFiguresOnCell(figures, ring, idx, allPlayers) {
 }
 
 function getFiguresOnFinish(allPlayers, colorKey, lane, slot) {
+  if (!Array.isArray(allPlayers)) return [];
   const result = [];
   allPlayers.forEach(player => {
     player.figures.forEach(fig => {
@@ -44,11 +68,6 @@ function getFiguresOnFinish(allPlayers, colorKey, lane, slot) {
   return result;
 }
 
-function getFiguresInHome(allPlayers, colorKey) {
-  const player = allPlayers.find(p => p.color === colorKey);
-  if (!player) return [];
-  return player.figures.filter(f => f.pos === 'home');
-}
 
 function Figure({ playerColor, figId, isSelected, isMoveable, onClick }) {
   return (
@@ -69,15 +88,15 @@ export default function Board({
   validTargets,
   onFigureClick,
   onCellClick,
-  currentPlayerColor,
 }) {
-  const players = gamePlayers || [];
+  const players = Array.isArray(gamePlayers) ? gamePlayers : [];
+  const spawnMap = buildSpawnMap(players);
 
   function renderFigures(figures, isHome = false) {
     if (!figures.length) return null;
     return (
       <div className={`figures-group ${isHome ? 'figures-group--home' : ''}`}>
-        {figures.map((fig, i) => {
+        {figures.map((fig) => {
           const isSelected = selectedFigure &&
             selectedFigure.figId === fig.id &&
             selectedFigure.playerColor === fig.playerColor;
@@ -107,6 +126,7 @@ export default function Board({
       let className = `board-cell board-cell--${cell.type}`;
       if (cell.color) className += ` board-cell--${cell.color}`;
 
+      const spawn = spawnMap[key];
       let content = null;
       let specialIcon = null;
 
@@ -115,10 +135,7 @@ export default function Board({
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
         }
-        const figs = getFiguresOnCell(players, 'outer', cell.outerIdx, players.map(p => ({
-          ...p,
-          figures: p.figures.map(f => ({ ...f, playerColor: p.color })),
-        })));
+        const figs = getFiguresOnCell('outer', cell.outerIdx, players);
         const isTarget = validTargets?.some(t => t.ring === 'outer' && t.idx === cell.outerIdx);
         if (isTarget) className += ' board-cell--target';
         content = renderFigures(figs);
@@ -127,23 +144,23 @@ export default function Board({
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
         }
-        const figs = getFiguresOnCell(players, 'inner', cell.innerIdx, players.map(p => ({
-          ...p,
-          figures: p.figures.map(f => ({ ...f, playerColor: p.color })),
-        })));
+        const figs = getFiguresOnCell('inner', cell.innerIdx, players);
         const isTarget = validTargets?.some(t => t.ring === 'inner' && t.idx === cell.innerIdx);
         if (isTarget) className += ' board-cell--target';
         content = renderFigures(figs);
       } else if (cell.type === 'home') {
-        const homeFigs = getFiguresInHome(players, cell.color);
-        const homePlayerFigs = homeFigs.map(f => ({ ...f, playerColor: cell.color }));
-        content = renderFigures(homePlayerFigs, true);
-      } else if (cell.type === 'outer-finish' || cell.type === 'inner-finish') {
-        const lane = cell.type === 'outer-finish' ? 'outer' : 'inner';
-        const figs = getFiguresOnFinish(players, cell.color, lane, cell.slot);
+        const player = players.find(p => p.color === cell.color);
+        if (player) {
+          const fig = player.figures[cell.homeSlot];
+          if (fig && fig.pos === 'home') {
+            content = renderFigures([{ ...fig, playerColor: cell.color }], true);
+          }
+        }
+      } else if (cell.type === 'finish') {
+        const figs = getFiguresOnFinish(players, cell.color, 'finish', cell.slot);
         const figsMapped = figs.map(f => ({ ...f, playerColor: cell.color }));
         const isTarget = validTargets?.some(
-          t => t.lane === lane && t.color === cell.color && t.slot === cell.slot
+          t => t.lane === 'finish' && t.color === cell.color && t.slot === cell.slot
         );
         if (isTarget) className += ' board-cell--target';
         content = (
@@ -162,10 +179,16 @@ export default function Board({
         <div
           key={key}
           className={className}
+          style={spawn ? { backgroundColor: COLOR_HEX[spawn.color] + '55' } : undefined}
           onClick={() => onCellClick?.({ r, c, cell })}
           data-r={r}
           data-c={c}
         >
+          {spawn && (
+            <span className="spawn-arrow" style={{ color: COLOR_HEX[spawn.color] }}>
+              {spawn.dir}
+            </span>
+          )}
           {specialIcon && <span className="special-icon">{specialIcon}</span>}
           {content}
         </div>

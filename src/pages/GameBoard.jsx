@@ -2,21 +2,17 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { useGame, getValidMoves } from '../hooks/useGame.js';
+import { useGame } from '../hooks/useGame.js';
 import Board from '../components/Board/Board.jsx';
 import Dice from '../components/Dice.jsx';
 import PlayerPanel from '../components/PlayerPanel.jsx';
 import Modal from '../components/Modal.jsx';
-import { PLAYERS, canPlaceSpecial, INNER_PATH, OUTER_PATH } from '../data/boardLayout.js';
+import { canPlaceSpecial } from '../data/boardLayout.js';
 import './GameBoard.css';
 
 const COLOR_HEX = {
   red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-  cyan: '#00acc1', purple: '#8e24aa', magenta: '#d81b60', orange: '#fb8c00',
-};
-
-const SPECIAL_ICONS = {
-  most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '🛑', zamjena: '🔄',
+  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
 };
 
 function loadSetup() {
@@ -37,7 +33,8 @@ export default function GameBoard() {
   }, []);
 
   const { state, currentPlayer, validMoves, rollDice, selectMove,
-    skipPlaceSpecial, placeSpecial, resolveDuel, resolveMost, resolveKocka, resolveZamjena
+    skipPlaceSpecial, placeSpecial, resolveDuel, resolveMost, resolveKocka, resolveZamjena,
+    endTurn, initialRoll, continueAfterTie, startGame,
   } = useGame(setup?.players || []);
 
   const [selectedSpecialType, setSelectedSpecialType] = useState(null);
@@ -45,12 +42,21 @@ export default function GameBoard() {
 
   // Derived
   const phase = state.phase;
+  const isInitialRoll = phase === 'initial-roll';
   const isRolling = phase === 'rolling';
   const isMoving = phase === 'moving';
   const isPlacing = phase === 'placing-special';
   const isDuel = phase === 'duel';
   const isSpecial = phase === 'special-trigger';
   const isOver = phase === 'game-over';
+  const isNoMoves = phase === 'no-moves';
+
+  // Auto-advance after showing the dice result when there are no valid moves
+  useEffect(() => {
+    if (!isNoMoves) return;
+    const timer = setTimeout(endTurn, 1500);
+    return () => clearTimeout(timer);
+  }, [isNoMoves, endTurn]);
 
   const moveableFigures = isMoving
     ? validMoves.map(m => ({ figId: m.figId, playerColor: currentPlayer.color }))
@@ -84,7 +90,7 @@ export default function GameBoard() {
 
   const [exitChoiceFig, setExitChoiceFig] = useState(null);
 
-  function handleCellClick({ r, c, cell }) {
+  function handleCellClick({ cell }) {
     // Tap a target cell to select move
     if (isMoving) {
       if (cell.type === 'outer-path') {
@@ -93,9 +99,8 @@ export default function GameBoard() {
       } else if (cell.type === 'inner-path') {
         const move = validMoves.find(m => m.ring === 'inner' && m.idx === cell.innerIdx);
         if (move) selectMove(move);
-      } else if (cell.type === 'inner-finish' || cell.type === 'outer-finish') {
-        const lane = cell.type === 'inner-finish' ? 'inner' : 'outer';
-        const move = validMoves.find(m => m.lane === lane && m.color === cell.color && m.slot === cell.slot);
+      } else if (cell.type === 'finish') {
+        const move = validMoves.find(m => m.lane === 'finish' && m.color === cell.color && m.slot === cell.slot);
         if (move) selectMove(move);
       }
     }
@@ -103,12 +108,14 @@ export default function GameBoard() {
     // Tap to place special
     if (isPlacing && selectedSpecialType) {
       if (cell.type === 'outer-path') {
-        if (canPlaceSpecial('outer', cell.outerIdx, currentPlayer.color)) {
+        const activeColors = state.players.map(p => p.color);
+        if (canPlaceSpecial('outer', cell.outerIdx, activeColors) && !state.specialsOnBoard[`outer-${cell.outerIdx}`]) {
           placeSpecial('outer', cell.outerIdx, selectedSpecialType);
           setSelectedSpecialType(null);
         }
       } else if (cell.type === 'inner-path') {
-        if (canPlaceSpecial('inner', cell.innerIdx, currentPlayer.color)) {
+        const activeColors = state.players.map(p => p.color);
+        if (canPlaceSpecial('inner', cell.innerIdx, activeColors) && !state.specialsOnBoard[`inner-${cell.innerIdx}`]) {
           placeSpecial('inner', cell.innerIdx, selectedSpecialType);
           setSelectedSpecialType(null);
         }
@@ -118,20 +125,16 @@ export default function GameBoard() {
 
   function handleDuelRoll(who) {
     const val = Math.floor(Math.random() * 6) + 1;
-    if (who === 'atk') {
-      const newRolls = { ...duelRolls, atk: val };
-      setDuelRolls(newRolls);
-      if (newRolls.def !== null) {
+    const newRolls = who === 'atk'
+      ? { ...duelRolls, atk: val }
+      : { ...duelRolls, def: val };
+    setDuelRolls(newRolls);
+
+    if (newRolls.atk !== null && newRolls.def !== null) {
+      setTimeout(() => {
         resolveDuel(newRolls.atk, newRolls.def);
         setDuelRolls({ atk: null, def: null });
-      }
-    } else {
-      const newRolls = { ...duelRolls, def: val };
-      setDuelRolls(newRolls);
-      if (newRolls.atk !== null) {
-        resolveDuel(newRolls.atk, newRolls.def);
-        setDuelRolls({ atk: null, def: null });
-      }
+      }, 1500);
     }
   }
 
@@ -259,6 +262,17 @@ export default function GameBoard() {
         />
       )}
 
+      {/* Initial roll modal — rule 2 */}
+      {isInitialRoll && (
+        <InitialRollModal
+          state={state}
+          players={state.players}
+          onRoll={initialRoll}
+          onContinue={continueAfterTie}
+          onStart={startGame}
+        />
+      )}
+
       {/* Win modal */}
       {isOver && state.winner && (
         <Modal title={t('gameWin')}>
@@ -284,7 +298,7 @@ export default function GameBoard() {
 function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena }) {
   const COLOR_HEX = {
     red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-    cyan: '#00acc1', purple: '#8e24aa', magenta: '#d81b60', orange: '#fb8c00',
+    cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
   };
 
   if (trigger.type === 'most') {
@@ -338,4 +352,80 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena }) {
   }
 
   return null;
+}
+
+function InitialRollModal({ state, players, onRoll, onContinue, onStart }) {
+  const COLOR_HEX = {
+    red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
+    cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
+  };
+
+  const { initialRollOrder, initialRolls, initialRollIdx, initialRollWinner, initialRollTied } = state;
+  const allRolled = initialRollIdx >= initialRollOrder.length;
+  const isReroll = initialRollOrder.length < players.length;
+  const currentColor = !allRolled ? initialRollOrder[initialRollIdx] : null;
+  const currentPlayer = currentColor ? players.find(p => p.color === currentColor) : null;
+  const winner = initialRollWinner ? players.find(p => p.color === initialRollWinner) : null;
+
+  return (
+    <Modal title="🎲 Tko ide prvi?">
+      {isReroll && (
+        <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+          Izjednačeno — isti igrači bacaju opet!
+        </p>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+        {initialRollOrder.map(color => {
+          const player = players.find(p => p.color === color);
+          const roll = initialRolls[color];
+          const isCurrent = color === currentColor;
+          const isMax = allRolled && roll === Math.max(...Object.values(initialRolls));
+          return (
+            <div
+              key={color}
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '8px 14px',
+                background: 'var(--bg-secondary)',
+                borderRadius: '8px',
+                border: `2px solid ${isCurrent ? COLOR_HEX[color] : isMax ? COLOR_HEX[color] : 'transparent'}`,
+                opacity: isCurrent || !allRolled || isMax ? 1 : 0.5,
+              }}
+            >
+              <span style={{ color: COLOR_HEX[color], fontWeight: 700 }}>● {player?.name}</span>
+              <span style={{ fontSize: '1.5rem', fontWeight: 900, color: isMax ? COLOR_HEX[color] : 'var(--text-primary)' }}>
+                {roll !== undefined ? roll : isCurrent ? '?' : '—'}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {winner && (
+        <>
+          <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem', marginTop: '4px' }}>
+            <span style={{ color: COLOR_HEX[initialRollWinner] }}>{winner.name}</span> počinje!
+          </p>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={onStart}>
+            🎮 Započni igru!
+          </button>
+        </>
+      )}
+
+      {initialRollTied && !winner && (
+        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onContinue}>
+          🎲 Baci opet
+        </button>
+      )}
+
+      {!allRolled && (
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onRoll}>
+          🎲 {currentPlayer?.name} baci!
+        </button>
+      )}
+    </Modal>
+  );
 }
