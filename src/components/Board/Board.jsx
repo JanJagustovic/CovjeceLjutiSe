@@ -1,5 +1,45 @@
+import { useState } from 'react';
 import { GRID, PLAYERS, OUTER_PATH, INNER_PATH } from '../../data/boardLayout.js';
 import './Board.css';
+
+const CENTER_PIPS = {
+  1: [[50,50]],
+  2: [[25,25],[75,75]],
+  3: [[25,25],[50,50],[75,75]],
+  4: [[25,25],[75,25],[25,75],[75,75]],
+  5: [[25,25],[75,25],[50,50],[25,75],[75,75]],
+  6: [[25,22],[75,22],[25,50],[75,50],[25,78],[75,78]],
+};
+
+function CenterDie({ value, onRoll, disabled, rollsLeft }) {
+  const [rolling, setRolling] = useState(false);
+
+  function handleRoll() {
+    if (disabled || rolling) return;
+    setRolling(true);
+    setTimeout(() => setRolling(false), 600);
+    onRoll?.();
+  }
+
+  return (
+    <div className="board-dice-overlay">
+      <div
+        className={`center-die${value ? ' center-die--has-value' : ''}${!disabled ? ' center-die--active' : ''}${rolling ? ' center-die--rolling' : ''}`}
+        onClick={handleRoll}
+      >
+        {value
+          ? CENTER_PIPS[value]?.map(([x, y], i) => (
+              <div key={i} className="center-die-pip" style={{ left: `${x}%`, top: `${y}%` }} />
+            ))
+          : <span className="center-die-label">🎲</span>
+        }
+      </div>
+      {!disabled && rollsLeft > 1 && (
+        <span className="center-die-rolls">{rollsLeft}×</span>
+      )}
+    </div>
+  );
+}
 
 const SPECIAL_ICONS = {
   most:    '🌉',
@@ -89,6 +129,10 @@ export default function Board({
   validTargets,
   onFigureClick,
   onCellClick,
+  onRoll,
+  diceValue,
+  diceDisabled,
+  rollsLeft,
 }) {
   const players = Array.isArray(gamePlayers) ? gamePlayers : [];
   const spawnMap = buildSpawnMap(players);
@@ -175,10 +219,6 @@ export default function Board({
             {renderFigures(figsMapped)}
           </>
         );
-      } else if (cell.type === 'center') {
-        if (r === 9 && c === 9) {
-          content = <span className="board-center-text">🎲</span>;
-        }
       }
 
       cells.push(
@@ -211,6 +251,14 @@ export default function Board({
       <div className="board-grid">
         {cells}
       </div>
+      {onRoll && (
+        <CenterDie
+          value={diceValue}
+          onRoll={onRoll}
+          disabled={diceDisabled}
+          rollsLeft={rollsLeft}
+        />
+      )}
     </div>
   );
 }

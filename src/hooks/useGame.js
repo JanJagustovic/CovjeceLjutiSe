@@ -267,14 +267,16 @@ function applyMove(state, move) {
         defRoll: null,
       };
     }
+  }
 
-    // Check special square
-    const spKey = `${ring}-${idx}`;
+  if (move.type === 'move' || move.type === 'exit') {
+    // Check special square — applies even on rewind moves
+    const spKey = `${move.ring}-${move.idx}`;
     if (!duelState && state.specialsOnBoard[spKey]) {
       specialTrigger = {
         type: state.specialsOnBoard[spKey].type,
-        ring,
-        idx,
+        ring: move.ring,
+        idx: move.idx,
         figId: move.figId,
         playerColor: player.color,
         placedBy: state.specialsOnBoard[spKey].placedBy,
@@ -318,6 +320,38 @@ function afterMove(state, move) {
   }
 
   return advanceTurn(state);
+}
+
+// Shared post-landing logic for moves that teleport a piece (MOST bridge, KOCKA).
+// Checks collision → duel, then special trigger, then normal afterMove.
+function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
+  const occupied = findFigureOnCell(newPlayers.filter(p => p.color !== playerColor), ring, idx);
+  if (occupied) {
+    const duelSt = {
+      atkColor: playerColor,
+      defColor: occupied.player.color,
+      ring,
+      idx,
+      figId,
+      defFigId: occupied.figure.id,
+      atkRoll: null,
+      defRoll: null,
+    };
+    return { ...state, players: newPlayers, duelState: duelSt, phase: 'duel' };
+  }
+  const spKey = `${ring}-${idx}`;
+  if (state.specialsOnBoard[spKey]) {
+    const trigger = {
+      type: state.specialsOnBoard[spKey].type,
+      ring,
+      idx,
+      figId,
+      playerColor,
+      placedBy: state.specialsOnBoard[spKey].placedBy,
+    };
+    return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
+  }
+  return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
 }
 
 function applySpecialTrigger(state, trigger) {
@@ -379,7 +413,7 @@ function reducer(state, action) {
           // Got 6 or used all rolls
           const moves = getValidMoves({ ...state, diceValue: val }, val);
           if (val === 6 && moves.length > 0) {
-            return { ...state, diceValue: val, rollsLeft: newRollsLeft, phase: 'moving', bonusRoll: false };
+            return { ...state, diceValue: val, rollsLeft: newRollsLeft, phase: 'moving', bonusRoll: true };
           }
           if (newRollsLeft <= 0) {
             return { ...state, diceValue: val, rollsLeft: 0, phase: 'no-moves' };
@@ -514,13 +548,14 @@ function reducer(state, action) {
       const fig = mover.figures.find(f => f.id === trigger.figId);
       fig.pos = { ring: dest.ring, idx: dest.idx };
 
-      return afterMove({ ...state, players: newPlayers, specialTrigger: null }, { type: 'move', ring: dest.ring, idx: dest.idx });
+      return afterLanding(
+        { ...state, specialTrigger: null },
+        newPlayers, dest.ring, dest.idx, trigger.figId, trigger.playerColor
+      );
     }
 
     case 'RESOLVE_KOCKA': {
-      const { trigger } = action;
-      const d1 = rollD6();
-      const d2 = rollD6();
+      const { trigger, d1, d2 } = action;
       const total = d1 + d2;
       const player = state.players[state.currentPlayerIndex];
       const pd = playerDef(player.color);
@@ -545,11 +580,12 @@ function reducer(state, action) {
         fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
       }
 
-      const finalIdx = typeof fig.pos === 'object' && fig.pos.ring ? fig.pos.idx : trigger.idx;
-      return afterMove({
-        ...state, players: newPlayers, specialTrigger: null,
-        secondDiceValue: d1 * 10 + d2,
-      }, { type: 'move', ring: trigger.ring, idx: finalIdx });
+      const newState = { ...state, players: newPlayers, specialTrigger: null, secondDiceValue: d1 * 10 + d2 };
+      if (typeof fig.pos === 'object' && fig.pos.ring) {
+        return afterLanding(newState, newPlayers, fig.pos.ring, fig.pos.idx, trigger.figId, trigger.playerColor);
+      }
+      // Landed in finish or stayed put — no collision possible
+      return afterMove(newState, { type: 'move', ring: trigger.ring, idx: trigger.idx });
     }
 
     case 'DISMISS_SPECIAL_INFO': {
@@ -651,8 +687,8 @@ export function useGame(setupPlayers) {
     dispatch({ type: 'RESOLVE_DUEL', atkRoll, defRoll }), []);
   const resolveMost = useCallback((cross, trigger) =>
     dispatch({ type: 'RESOLVE_MOST', cross, trigger }), []);
-  const resolveKocka = useCallback(trigger =>
-    dispatch({ type: 'RESOLVE_KOCKA', trigger }), []);
+  const resolveKocka = useCallback((trigger, d1, d2) =>
+    dispatch({ type: 'RESOLVE_KOCKA', trigger, d1, d2 }), []);
   const resolveZamjena = useCallback((trigger, targetColor, targetFigId) =>
     dispatch({ type: 'RESOLVE_ZAMJENA', trigger, targetColor, targetFigId }), []);
   const dismissSpecialInfo = useCallback(() => dispatch({ type: 'DISMISS_SPECIAL_INFO' }), []);

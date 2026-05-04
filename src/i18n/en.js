@@ -78,7 +78,6 @@ const en = {
 
   // Rules
   rulesTitle:   'Game Rules',
-  rulesStatic:  'Static',
   rulesDynamic: 'Dynamic',
 
   // Settings

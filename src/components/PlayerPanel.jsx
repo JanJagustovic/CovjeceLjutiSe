@@ -17,6 +17,7 @@ export default function PlayerPanel({
   onSelectSpecialForPlace,
   selectedSpecial,
   mostCanPlace,
+  onSkipPlaceSpecial,
   t,
 }) {
   const current = players[currentPlayerIndex];
@@ -52,7 +53,7 @@ export default function PlayerPanel({
       </div>
 
       {/* Specials in hand */}
-      {current.specialsHeld.length > 0 && (
+      {(current.specialsHeld.length > 0 || phase === 'placing-special') && (
         <div className="panel-specials">
           {Object.entries(specialCounts).map(([type, count]) => {
             const isDisabled = phase === 'placing-special' && type === 'most' && mostCanPlace === false;
@@ -67,6 +68,14 @@ export default function PlayerPanel({
               </button>
             );
           })}
+          {phase === 'placing-special' && (
+            <button
+              className="special-chip special-chip--skip"
+              onClick={onSkipPlaceSpecial}
+            >
+              ✕
+            </button>
+          )}
         </div>
       )}
 

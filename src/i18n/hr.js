@@ -78,7 +78,6 @@ const hr = {
 
   // Rules
   rulesTitle:   'Pravila igre',
-  rulesStatic:  'Statički',
   rulesDynamic: 'Dinamički',
 
   // Settings

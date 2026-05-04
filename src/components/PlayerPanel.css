@@ -83,6 +83,20 @@
   text-decoration: line-through;
 }
 
+.special-chip--skip {
+  cursor: pointer;
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  opacity: 0.7;
+}
+
+.special-chip--skip:hover {
+  opacity: 1;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
 .panel-players-strip {
   display: flex;
   gap: var(--sp-xs);

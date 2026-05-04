@@ -18,27 +18,6 @@
   font-weight: 700;
 }
 
-.rules-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-secondary);
-}
-
-.rules-tab {
-  flex: 1;
-  padding: var(--sp-sm) var(--sp-md);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  border-bottom: 3px solid transparent;
-  transition: all var(--transition);
-}
-
-.rules-tab--active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
 
 .rules-scroll {
   flex: 1;

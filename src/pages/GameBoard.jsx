@@ -5,7 +5,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useGame } from '../hooks/useGame.js';
 import { canPlaceMost } from '../data/boardLayout.js';
 import Board from '../components/Board/Board.jsx';
-import Dice from '../components/Dice.jsx';
 import PlayerPanel from '../components/PlayerPanel.jsx';
 import Modal from '../components/Modal.jsx';
 import './GameBoard.css';
@@ -24,7 +23,7 @@ function loadSetup() {
 
 export default function GameBoard() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
 
   const setup = loadSetup();
@@ -158,9 +157,14 @@ export default function GameBoard() {
           {phase === 'placing-special' && ' — postavi'}
           {phase === 'duel' && ' — dvoboj!'}
         </span>
-        <button className="btn btn-ghost" onClick={toggleTheme} style={{ fontSize: '1.1rem' }}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+        <div style={{ display: 'flex', gap: '2px' }}>
+          <button className="btn btn-ghost" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')} style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+            {lang === 'hr' ? 'EN' : 'HR'}
+          </button>
+          <button className="btn btn-ghost" onClick={toggleTheme} style={{ fontSize: '1.1rem' }}>
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
       </div>
 
       {/* Board */}
@@ -173,6 +177,10 @@ export default function GameBoard() {
           onFigureClick={handleFigureClick}
           onCellClick={handleCellClick}
           currentPlayerColor={currentPlayer.color}
+          onRoll={rollDice}
+          diceValue={state.diceValue}
+          diceDisabled={!isRolling}
+          rollsLeft={state.rollsLeft}
         />
       </div>
 
@@ -189,24 +197,14 @@ export default function GameBoard() {
           }}
           selectedSpecial={selectedSpecialType}
           mostCanPlace={mostCanPlace}
+          onSkipPlaceSpecial={() => { setSelectedSpecialType(null); skipPlaceSpecial(); }}
           t={t}
         />
         <div className="game-controls">
-          <Dice
-            value={state.diceValue}
-            onRoll={rollDice}
-            disabled={!isRolling}
-            rollsLeft={state.rollsLeft}
-          />
           {isPlacing && selectedSpecialType === 'most' && !mostCanPlace && (
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '2px 0' }}>
               🌉 MOST nije moguć — nema slobodnog paralelnog polja
             </p>
-          )}
-          {isPlacing && (
-            <button className="btn btn-ghost" onClick={() => { setSelectedSpecialType(null); skipPlaceSpecial(); }}>
-              {t('gameSkip')}
-            </button>
           )}
           {isMoving && validMoves.length === 0 && (
             <button className="btn btn-secondary" onClick={skipPlaceSpecial}>
@@ -270,7 +268,7 @@ export default function GameBoard() {
           players={state.players}
           t={t}
           onMost={cross => resolveMost(cross, state.specialTrigger)}
-          onKocka={() => resolveKocka(state.specialTrigger)}
+          onKocka={(d1, d2) => resolveKocka(state.specialTrigger, d1, d2)}
           onZamjena={(tc, tf) => resolveZamjena(state.specialTrigger, tc, tf)}
           onDismiss={dismissSpecialInfo}
         />
@@ -309,6 +307,36 @@ export default function GameBoard() {
   );
 }
 
+function KockaModal({ t, onKocka }) {
+  const [rolled, setRolled] = useState(null);
+
+  function handleRoll() {
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    setRolled({ d1, d2 });
+    setTimeout(() => onKocka(d1, d2), 1500);
+  }
+
+  return (
+    <Modal title={`🎲 ${t('specialKocka')}`}>
+      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('specialKockaMsg')}</p>
+      {rolled ? (
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center', fontSize: '1.4rem', fontWeight: 900, margin: '8px 0' }}>
+          <span>🎲 {rolled.d1}</span>
+          <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>+</span>
+          <span>🎲 {rolled.d2}</span>
+          <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>=</span>
+          <span style={{ color: 'var(--accent)' }}>{rolled.d1 + rolled.d2}</span>
+        </div>
+      ) : (
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleRoll}>
+          🎲🎲 {t('gameRoll')}
+        </button>
+      )}
+    </Modal>
+  );
+}
+
 function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismiss }) {
   const COLOR_HEX = {
     red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
@@ -344,12 +372,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
   }
 
   if (trigger.type === 'kocka') {
-    return (
-      <Modal title={`🎲 ${t('specialKocka')}`}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('specialKockaMsg')}</p>
-        <button className="btn btn-primary" onClick={onKocka}>🎲🎲 {t('gameRoll')}</button>
-      </Modal>
-    );
+    return <KockaModal t={t} onKocka={onKocka} />;
   }
 
   if (trigger.type === 'zamjena') {

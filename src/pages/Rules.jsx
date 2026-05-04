@@ -1,41 +1,21 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import './Rules.css';
 
-const SPECIALS_STATIC = {
+const SPECIALS = {
   hr: [
     { emoji: '🌉', name: 'MOST',    desc: 'Za figuricu koja je stala na most igrač odlučuje hoće li figurica ostati ili s njom prelazi most.' },
     { emoji: '🎲', name: 'KOCKA',   desc: 'Za figuricu koja je stala na kocku igrač odmah baca dvije kocke i pomiče tu figuricu. Ako nije moguće napraviti potez s tom figuricom tada je na redu idući igrač.' },
     { emoji: '⏪', name: 'REWIND',  desc: 'Figurica se na idućem potezu mora kretati suprotno od kazaljke na satu. Potez je moguć ako se figurica zaustavlja na polje koje je izlazak za tog igrača ili prije toga.' },
-    { emoji: '💣', name: 'BOMBA',   desc: 'Figurica se vraća u svoj kvadrat HOME.' },
-    { emoji: '⏸️', name: 'STOP',    desc: 'Figurica koja je stala na stop smije se kretati samo za jedno polje kada se na kocki dobije broj jedan.' },
-    { emoji: '🔄', name: 'ZAMJENA', desc: 'Igrač odabire figuricu određene boje s kojom radi zamjenu. Boja se određuje bacanjem kocke i brojanjem od lijevog suigrača u smjeru kazaljke na satu (preskaču se sebe u brojanju). Ako nema slobodnih figurica te boje zamjena se ne izvršava.' },
-  ],
-  en: [
-    { emoji: '🌉', name: 'BRIDGE', desc: 'The player whose piece landed on the bridge decides whether to stay or cross to the parallel ring.' },
-    { emoji: '🎲', name: 'DICE',   desc: 'The player immediately rolls two dice and moves that piece by their sum. If no valid move exists, the next player takes their turn.' },
-    { emoji: '⏪', name: 'REWIND', desc: 'The piece must move counter-clockwise on its next turn. The move is valid if the piece stops at or before the player\'s own finish entry.' },
-    { emoji: '💣', name: 'BOMB',   desc: 'The piece returns to its HOME area.' },
-    { emoji: '⏸️', name: 'STOP',   desc: 'The piece can only move one square when the die shows exactly 1.' },
-    { emoji: '🔄', name: 'SWAP',   desc: 'The player picks a color to swap with by rolling the die and counting clockwise from the left neighbor (skipping themselves). If no eligible pieces of that color exist, no swap occurs.' },
-  ],
-};
-
-const SPECIALS_DYNAMIC = {
-  hr: [
-    { emoji: '🌉', name: 'MOST',    desc: 'Za figuricu koja je stala na most igrač odlučuje hoće li figurica ostati ili s njom prelazi most.' },
-    { emoji: '🎲', name: 'KOCKA',   desc: 'Za figuricu koja je stala na kocku igrač odmah baca dvije kocke i pomiče tu figuricu. Ako nije moguće napraviti potez s tom figuricom tada je na redu idući igrač.' },
-    { emoji: '⏪', name: 'REWIND',  desc: 'Figurica se na idućem potezu mora kretati suprotno od kazaljke na satu. Potez je moguć ako se figurica zaustavlja na polje koje je izlazak za tog igrača ili prije toga.' },
-    { emoji: '💣', name: 'BOMBA',   desc: 'Figurica koja stane na bombu vraća se u svoj kvadratić HOME i igrač koji je postavio bombu uzima je natrag za ponovno postavljanje.' },
+    { emoji: '💣', name: 'BOMBA',   desc: 'Figurica koja stane na bombu vraća se u svoj kvadratić HOME i igrač koji je stao na bombu uzima je u ruku za ponovno postavljanje.' },
     { emoji: '⏸️', name: 'STOP',    desc: 'Figurica koja je stala na stop smije se kretati samo za jedno polje kada se na kocki dobije broj jedan.' },
     { emoji: '🔄', name: 'ZAMJENA', desc: 'Igrač koji figuricom stane na to mjesto bira figuricu boje igrača koji je postavio to posebno polje. Ako nema slobodnih figurica te boje zamjena se ne izvršava.' },
   ],
   en: [
     { emoji: '🌉', name: 'BRIDGE', desc: 'The player whose piece landed on the bridge decides whether to stay or cross to the parallel ring.' },
     { emoji: '🎲', name: 'DICE',   desc: 'The player immediately rolls two dice and moves that piece by their sum. If no valid move exists, the next player takes their turn.' },
-    { emoji: '⏪', name: 'REWIND', desc: 'The piece must move counter-clockwise on its next turn. The move is valid if the piece stops at or before the player\'s own finish entry.' },
-    { emoji: '💣', name: 'BOMB',   desc: 'The piece returns to HOME and the player who placed the bomb reclaims it for future placement.' },
+    { emoji: '⏪', name: 'REWIND', desc: 'The piece must move counter-clockwise on its next turn. The move is valid if the piece stops at or before the player\'s own exit point.' },
+    { emoji: '💣', name: 'BOMB',   desc: 'The piece that lands on a bomb returns to HOME, and that player picks up the bomb to use again later.' },
     { emoji: '⏸️', name: 'STOP',   desc: 'The piece can only move one square when the die shows exactly 1.' },
     { emoji: '🔄', name: 'SWAP',   desc: 'The landing player swaps with a piece belonging to the player who placed this square. If no eligible pieces exist, no swap occurs.' },
   ],
@@ -71,73 +51,9 @@ function SpecialRow({ emoji, name, desc }) {
   );
 }
 
-function StaticRules({ lang }) {
+function RulesContent({ lang }) {
   const hr = lang === 'hr';
-  const specials = SPECIALS_STATIC[lang];
-  return (
-    <div className="rules-content">
-      <Rule num="1)">
-        {hr
-          ? 'Na početku igre svaki igrač (2 do 8 igrača) ima 4 figurice iste boje smještene u kvadrat HOME te iste boje. Cilj je smjestiti sve figurice u kućicu iste boje označene brojevima 1 do 4 kretanjem po mapi u smjeru kazaljke na satu.'
-          : 'Each player (2–8) starts with 4 pieces of their color in their HOME area. The goal is to move all pieces into the numbered finish slots (1–4) by traveling clockwise around the board.'}
-      </Rule>
-      <Rule num="2)">
-        {hr
-          ? 'Bacanjem kocke određuje se igrač koji prvi počinje igru. Ako je više istih najvećih brojeva tada ti igrači bacaju ponovno dok se ne dobije jedan igrač s najvećim brojem. Sljedeći igrač na potezu je u smjeru kazaljke na satu.'
-          : 'Roll to determine who goes first. Tied highest rolls re-roll among themselves until one winner emerges. The next player in turn order is always clockwise.'}
-      </Rule>
-      <Rule num="3)">
-        {hr
-          ? 'Ako igrač koji je na potezu ima sve figurice u kvadratu HOME ili su uzastopno poredani u kućicama od 4 prema niže tada igrač ima 3 bacanja da dobije 6.'
-          : 'If all of a player\'s pieces are in HOME, or consecutively placed in finish slots counting down from 4, that player gets 3 rolls to try to get a 6.'}
-      </Rule>
-      <Rule num="4)">
-        {hr
-          ? 'Figuricom se može izaći ako se dobije 6 i ima slobodnih izlaza. Svaka boja ima dva moguća izlaza — jedan u manjem krugu, drugi u većem krugu.'
-          : 'A piece can exit HOME only on a roll of 6, and only if a free exit is available. Each color has two exits: one on the inner ring (shorter route) and one on the outer ring (longer route).'}
-      </Rule>
-      <Rule num="5)">
-        {hr
-          ? 'Svako polje na mapi se broji kao jedan. Čitav broj dobiven na kocki mora se iskoristiti za jednu figuricu za kretanje po mapi u smjeru kazaljke na satu do polja neposredno prije izlaska za igrača te boje. Ako nema mogućih ispravnih poteza tada je na redu idući igrač.'
-          : 'Every square counts as one step. The full dice value must be used for a single piece moving clockwise, stopping before the color\'s own finish entry. If no valid move exists, the next player takes their turn.'}
-      </Rule>
-      <Rule num="6)">
-        {hr
-          ? 'Igrač koji dobije 6 ima pravo na još jedno bacanje.'
-          : 'Rolling a 6 grants one additional roll.'}
-      </Rule>
-      <Rule num="7)">
-        {hr
-          ? 'Na istom polju smije biti samo jedna figurica.'
-          : 'Only one piece may occupy any single square at a time.'}
-      </Rule>
-      <Rule num="8)">
-        {hr
-          ? 'Ako figurica stane na isto polje gdje je figurica druge boje onda ta figurica koja se već nalazila na tom polju odlazi u svoj kvadrat HOME.'
-          : 'If a piece lands on a square occupied by an opponent\'s piece, that opponent\'s piece is sent back to its HOME area.'}
-      </Rule>
-      <Rule num="9)">
-        {hr
-          ? 'Posebna polja su: MOST, KOCKA, REWIND, BOMBA, STOP i ZAMJENA.'
-          : 'Special squares are: BRIDGE, DICE, REWIND, BOMB, STOP and SWAP.'}
-      </Rule>
-      <div className="rules-specials">
-        {specials.map((s, i) => (
-          <SpecialRow key={s.name} emoji={s.emoji} name={`9.${i + 1}) ${s.name}`} desc={s.desc} />
-        ))}
-      </div>
-      <Rule num="10)">
-        {hr
-          ? 'Igrač koji prvi poreda svoje figurice u kućice označene od 1 do 4 je pobijedio.'
-          : 'The first player to fill all finish slots 1–4 with their pieces wins.'}
-      </Rule>
-    </div>
-  );
-}
-
-function DynamicRules({ lang }) {
-  const hr = lang === 'hr';
-  const specials = SPECIALS_DYNAMIC[lang];
+  const specials = SPECIALS[lang];
   return (
     <div className="rules-content">
       <Rule num="1)">
@@ -227,7 +143,6 @@ function DynamicRules({ lang }) {
 export default function Rules() {
   const navigate = useNavigate();
   const { t, lang } = useLanguage();
-  const [tab, setTab] = useState('static');
 
   return (
     <div className="rules-page page">
@@ -235,26 +150,8 @@ export default function Rules() {
         <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('navBack')}</button>
         <h2 className="rules-title">{t('rulesTitle')}</h2>
       </div>
-
-      <div className="rules-tabs">
-        <button
-          className={`rules-tab ${tab === 'static' ? 'rules-tab--active' : ''}`}
-          onClick={() => setTab('static')}
-        >
-          {t('rulesStatic')}
-        </button>
-        <button
-          className={`rules-tab ${tab === 'dynamic' ? 'rules-tab--active' : ''}`}
-          onClick={() => setTab('dynamic')}
-        >
-          {t('rulesDynamic')}
-        </button>
-      </div>
-
       <div className="rules-scroll">
-        {tab === 'static'
-          ? <StaticRules lang={lang} />
-          : <DynamicRules lang={lang} />}
+        <RulesContent lang={lang} />
       </div>
     </div>
   );
