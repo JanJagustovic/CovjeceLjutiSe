@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGame } from '../hooks/useGame.js';
+import { canPlaceMost } from '../data/boardLayout.js';
 import Board from '../components/Board/Board.jsx';
 import Dice from '../components/Dice.jsx';
 import PlayerPanel from '../components/PlayerPanel.jsx';
 import Modal from '../components/Modal.jsx';
-import { canPlaceSpecial } from '../data/boardLayout.js';
 import './GameBoard.css';
 
 const COLOR_HEX = {
@@ -34,7 +34,7 @@ export default function GameBoard() {
 
   const { state, currentPlayer, validMoves, rollDice, selectMove,
     skipPlaceSpecial, placeSpecial, resolveDuel, resolveMost, resolveKocka, resolveZamjena,
-    endTurn, initialRoll, continueAfterTie, startGame,
+    dismissSpecialInfo, endTurn, initialRoll, continueAfterTie, startGame,
   } = useGame(setup?.players || []);
 
   const [selectedSpecialType, setSelectedSpecialType] = useState(null);
@@ -50,6 +50,11 @@ export default function GameBoard() {
   const isSpecial = phase === 'special-trigger';
   const isOver = phase === 'game-over';
   const isNoMoves = phase === 'no-moves';
+
+  // Whether MOST can be placed at the current landed cell
+  const mostCanPlace = isPlacing && state.lastMoveRing
+    ? !!canPlaceMost(state.lastMoveRing, state.lastMoveIdx, state.specialsOnBoard)
+    : true;
 
   // Auto-advance after showing the dice result when there are no valid moves
   useEffect(() => {
@@ -178,8 +183,12 @@ export default function GameBoard() {
           currentPlayerIndex={state.currentPlayerIndex}
           phase={phase}
           diceValue={state.diceValue}
-          onSelectSpecialForPlace={type => setSelectedSpecialType(type === selectedSpecialType ? null : type)}
+          onSelectSpecialForPlace={type => {
+            if (type === 'most' && !mostCanPlace) return;
+            setSelectedSpecialType(type === selectedSpecialType ? null : type);
+          }}
           selectedSpecial={selectedSpecialType}
+          mostCanPlace={mostCanPlace}
           t={t}
         />
         <div className="game-controls">
@@ -189,6 +198,11 @@ export default function GameBoard() {
             disabled={!isRolling}
             rollsLeft={state.rollsLeft}
           />
+          {isPlacing && selectedSpecialType === 'most' && !mostCanPlace && (
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '2px 0' }}>
+              🌉 MOST nije moguć — nema slobodnog paralelnog polja
+            </p>
+          )}
           {isPlacing && (
             <button className="btn btn-ghost" onClick={() => { setSelectedSpecialType(null); skipPlaceSpecial(); }}>
               {t('gameSkip')}
@@ -258,6 +272,7 @@ export default function GameBoard() {
           onMost={cross => resolveMost(cross, state.specialTrigger)}
           onKocka={() => resolveKocka(state.specialTrigger)}
           onZamjena={(tc, tf) => resolveZamjena(state.specialTrigger, tc, tf)}
+          onDismiss={dismissSpecialInfo}
         />
       )}
 
@@ -294,11 +309,29 @@ export default function GameBoard() {
   );
 }
 
-function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena }) {
+function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismiss }) {
   const COLOR_HEX = {
     red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
     cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
   };
+
+  if (trigger.type === 'stop') {
+    return (
+      <Modal title={`⏸️ ${t('specialStop')}`}>
+        <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialStopMsg')}</p>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>OK</button>
+      </Modal>
+    );
+  }
+
+  if (trigger.type === 'rewind') {
+    return (
+      <Modal title={`⏪ ${t('specialRewind')}`}>
+        <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialRewindMsg')}</p>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>OK</button>
+      </Modal>
+    );
+  }
 
   if (trigger.type === 'most') {
     return (

@@ -16,6 +16,7 @@ export default function PlayerPanel({
   diceValue,
   onSelectSpecialForPlace,
   selectedSpecial,
+  mostCanPlace,
   t,
 }) {
   const current = players[currentPlayerIndex];
@@ -53,16 +54,19 @@ export default function PlayerPanel({
       {/* Specials in hand */}
       {current.specialsHeld.length > 0 && (
         <div className="panel-specials">
-          {Object.entries(specialCounts).map(([type, count]) => (
-            <button
-              key={type}
-              className={`special-chip ${selectedSpecial === type ? 'special-chip--selected' : ''} ${phase === 'placing-special' ? 'special-chip--active' : ''}`}
-              onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
-              title={type}
-            >
-              {SPECIAL_ICONS[type]}{count > 1 ? `×${count}` : ''}
-            </button>
-          ))}
+          {Object.entries(specialCounts).map(([type, count]) => {
+            const isDisabled = phase === 'placing-special' && type === 'most' && mostCanPlace === false;
+            return (
+              <button
+                key={type}
+                className={`special-chip ${selectedSpecial === type ? 'special-chip--selected' : ''} ${phase === 'placing-special' ? 'special-chip--active' : ''} ${isDisabled ? 'special-chip--disabled' : ''}`}
+                onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
+                title={isDisabled ? 'MOST nije moguć na ovom polju' : type}
+              >
+                {SPECIAL_ICONS[type]}{count > 1 ? `×${count}` : ''}
+              </button>
+            );
+          })}
         </div>
       )}
 

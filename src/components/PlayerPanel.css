@@ -76,6 +76,13 @@
   border-color: var(--accent);
 }
 
+.special-chip--disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: var(--border);
+  text-decoration: line-through;
+}
+
 .panel-players-strip {
   display: flex;
   gap: var(--sp-xs);

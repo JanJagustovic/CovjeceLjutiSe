@@ -108,6 +108,16 @@
   transform: scale(1.2);
 }
 
+.figure--stop {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(255, 152, 0, 0.9);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.figure--rewind {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(33, 150, 243, 0.9);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
 /* Spawn point arrow */
 .spawn-arrow {
   position: absolute;

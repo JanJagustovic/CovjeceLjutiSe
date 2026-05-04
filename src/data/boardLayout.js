@@ -210,6 +210,68 @@ export function distributeSpecials(numPlayers) {
   return hand;
 }
 
+function isHomeCell(r, c) {
+  if (r < 0 || r > 18 || c < 0 || c > 18) return false;
+  return GRID[r][c].type === 'home';
+}
+
+// Find the parallel cell on the other ring for a bridge.
+// A bridge connects an outer-ring cell to the inner-ring cell directly across the margin,
+// unless a HOME cell sits in between. Returns {ring, idx} or null.
+// Index formulas (clockwise path layout):
+//   Outer: top idx=c, right idx=18+r, bottom idx=54-c, left idx=72-r
+//   Inner: top idx=c-3, right idx=9+r, bottom idx=39-c, left idx=51-r
+export function getBridgeParallel(ring, idx) {
+  const { r, c } = ring === 'outer' ? OUTER_PATH[idx] : INNER_PATH[idx];
+
+  if (ring === 'outer') {
+    if (r === 0 && c >= 3 && c <= 15) {
+      if (isHomeCell(1, c) || isHomeCell(2, c)) return null;
+      return { ring: 'inner', idx: c - 3 };
+    }
+    if (c === 18 && r >= 4 && r <= 15) {
+      if (isHomeCell(r, 16) || isHomeCell(r, 17)) return null;
+      return { ring: 'inner', idx: 9 + r };
+    }
+    if (r === 18 && c >= 3 && c <= 14) {
+      if (isHomeCell(16, c) || isHomeCell(17, c)) return null;
+      return { ring: 'inner', idx: 39 - c };
+    }
+    if (c === 0 && r >= 4 && r <= 14) {
+      if (isHomeCell(r, 1) || isHomeCell(r, 2)) return null;
+      return { ring: 'inner', idx: 51 - r };
+    }
+    return null;
+  } else {
+    if (r === 3 && c >= 3 && c <= 15) {
+      if (isHomeCell(1, c) || isHomeCell(2, c)) return null;
+      return { ring: 'outer', idx: c };
+    }
+    if (c === 15 && r >= 4 && r <= 15) {
+      if (isHomeCell(r, 16) || isHomeCell(r, 17)) return null;
+      return { ring: 'outer', idx: 18 + r };
+    }
+    if (r === 15 && c >= 3 && c <= 14) {
+      if (isHomeCell(16, c) || isHomeCell(17, c)) return null;
+      return { ring: 'outer', idx: 54 - c };
+    }
+    if (c === 3 && r >= 4 && r <= 14) {
+      if (isHomeCell(r, 1) || isHomeCell(r, 2)) return null;
+      return { ring: 'outer', idx: 72 - r };
+    }
+    return null;
+  }
+}
+
+// Check if a MOST bridge can be placed at (ring, idx).
+// Returns the destination {ring, idx} on success, or null if invalid.
+export function canPlaceMost(ring, idx, specialsOnBoard) {
+  const dest = getBridgeParallel(ring, idx);
+  if (!dest) return null;
+  if (specialsOnBoard?.[`${dest.ring}-${dest.idx}`]) return null;
+  return dest;
+}
+
 // Check if a cell can receive a special square (rule 9b).
 // activeColors: array of color strings for players currently in the game.
 // Blocked only if the cell is a spawn point (exitOuter/exitInner) of an active player.

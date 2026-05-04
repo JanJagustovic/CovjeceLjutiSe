@@ -69,13 +69,14 @@ function getFiguresOnFinish(allPlayers, colorKey, lane, slot) {
 }
 
 
-function Figure({ playerColor, figId, isSelected, isMoveable, onClick }) {
+function Figure({ playerColor, figId, isSelected, isMoveable, isStop, isRewind, onClick }) {
+  const extra = isStop ? ' figure--stop' : isRewind ? ' figure--rewind' : '';
   return (
     <div
-      className={`figure ${isSelected ? 'figure--selected' : ''} ${isMoveable ? 'figure--moveable' : ''}`}
+      className={`figure${isSelected ? ' figure--selected' : ''}${isMoveable ? ' figure--moveable' : ''}${extra}`}
       style={{ backgroundColor: COLOR_HEX[playerColor] }}
       onClick={onClick}
-      title={`${playerColor} #${figId}`}
+      title={`${playerColor} #${figId}${isStop ? ' ⏸️' : isRewind ? ' ⏪' : ''}`}
     />
   );
 }
@@ -110,6 +111,8 @@ export default function Board({
               figId={fig.id}
               isSelected={isSelected}
               isMoveable={isMoveable}
+              isStop={!!fig.stopActive}
+              isRewind={!!fig.rewindNext}
               onClick={() => onFigureClick?.(fig.playerColor, fig.id)}
             />
           );

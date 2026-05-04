@@ -2,7 +2,7 @@ import { useReducer, useCallback } from 'react';
 import {
   OUTER_PATH, INNER_PATH, PLAYERS,
   advanceCW, advanceCCW,
-  distributeSpecials, canPlaceSpecial,
+  distributeSpecials, canPlaceSpecial, canPlaceMost, getBridgeParallel,
 } from '../data/boardLayout.js';
 
 const OUTER_LEN = OUTER_PATH.length; // 72
@@ -143,7 +143,12 @@ export function getValidMoves(state, diceVal) {
       const pd = playerDef(player.color);
 
       if (fig.rewindNext) {
-        const targetIdx = advanceCCW(idx, diceVal, len);
+        let targetIdx = advanceCCW(idx, diceVal, len);
+        if (ring === 'inner') {
+          // Clamp backward move at the exit point — can't rewind past spawn
+          const stepsBackToExit = (idx - pd.exitInner + len) % len;
+          if (stepsBackToExit < diceVal) targetIdx = pd.exitInner;
+        }
         if (!findFigureOnCell(state.players, ring, targetIdx)) {
           moves.push({ figId: fig.id, type: 'move', ring, idx: targetIdx, rewind: true });
         }
@@ -214,9 +219,17 @@ function advanceTurn(state) {
   };
 }
 
+function deepCopyPlayers(players) {
+  return players.map(p => ({
+    ...p,
+    figures: p.figures.map(f => ({ ...f })),
+    specialsHeld: [...p.specialsHeld],
+  }));
+}
+
 function applyMove(state, move) {
   const player = state.players[state.currentPlayerIndex];
-  let newPlayers = state.players.map(p => ({ ...p, figures: p.figures.map(f => ({ ...f })) }));
+  let newPlayers = deepCopyPlayers(state.players);
   const mover = newPlayers.find(p => p.color === player.color);
   const fig = mover.figures.find(f => f.id === move.figId);
 
@@ -308,8 +321,8 @@ function afterMove(state, move) {
 }
 
 function applySpecialTrigger(state, trigger) {
-  const { type, ring, idx, figId, playerColor, placedBy } = trigger;
-  let newPlayers = state.players.map(p => ({ ...p, figures: p.figures.map(f => ({ ...f })) }));
+  const { type, ring, idx, figId, playerColor } = trigger;
+  let newPlayers = deepCopyPlayers(state.players);
   let newSpecials = { ...state.specialsOnBoard };
   const spKey = `${ring}-${idx}`;
 
@@ -318,9 +331,10 @@ function applySpecialTrigger(state, trigger) {
     const mover = newPlayers.find(p => p.color === playerColor);
     const fig = mover.figures.find(f => f.id === figId);
     fig.pos = 'home';
+    fig.stopActive = false;
+    fig.rewindNext = false;
     delete newSpecials[spKey];
-    const placer = newPlayers.find(p => p.color === placedBy);
-    if (placer) placer.specialsHeld.push('bomba');
+    mover.specialsHeld = [...mover.specialsHeld, 'bomba'];
     return advanceTurn({
       ...state,
       players: newPlayers,
@@ -332,14 +346,14 @@ function applySpecialTrigger(state, trigger) {
     const mover = newPlayers.find(p => p.color === playerColor);
     const fig = mover.figures.find(f => f.id === figId);
     fig.stopActive = true;
-    return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
+    return { ...state, players: newPlayers, phase: 'special-trigger', specialTrigger: trigger };
   }
 
   if (type === 'rewind') {
     const mover = newPlayers.find(p => p.color === playerColor);
     const fig = mover.figures.find(f => f.id === figId);
     fig.rewindNext = true;
-    return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
+    return { ...state, players: newPlayers, phase: 'special-trigger', specialTrigger: trigger };
   }
 
   // MOST, KOCKA, ZAMJENA: need UI interaction — set phase
@@ -403,13 +417,13 @@ function reducer(state, action) {
     case 'PLACE_SPECIAL': {
       const { ring, idx, specialType } = action;
       const player = state.players[state.currentPlayerIndex];
-      const newPlayers = state.players.map(p => {
-        if (p.color === player.color) {
-          const idx2 = p.specialsHeld.indexOf(specialType);
-          const newHeld = [...p.specialsHeld];
-          if (idx2 !== -1) newHeld.splice(idx2, 1);
-          return { ...p, specialsHeld: newHeld };
-        }
+      if (specialType === 'most' && !canPlaceMost(ring, idx, state.specialsOnBoard)) {
+        return state;
+      }
+      const newPlayers = deepCopyPlayers(state.players).map(p => {
+        if (p.color !== player.color) return p;
+        const i = p.specialsHeld.indexOf(specialType);
+        if (i !== -1) p.specialsHeld.splice(i, 1);
         return p;
       });
       const spKey = `${ring}-${idx}`;
@@ -450,13 +464,15 @@ function reducer(state, action) {
         return { ...state, duelState: { ...duelState, atkRoll: null, defRoll: null } };
       }
 
-      let newPlayers = state.players.map(p => ({ ...p, figures: p.figures.map(f => ({ ...f })) }));
+      let newPlayers = deepCopyPlayers(state.players);
       const loserColor = atkRoll > defRoll ? duelState.defColor : duelState.atkColor;
       const loserFigId = atkRoll > defRoll ? duelState.defFigId : duelState.figId;
 
       const loserPlayer = newPlayers.find(p => p.color === loserColor);
       const loserFig = loserPlayer.figures.find(f => f.id === loserFigId);
       loserFig.pos = 'home';
+      loserFig.stopActive = false;
+      loserFig.rewindNext = false;
 
       const attackerWon = atkRoll > defRoll;
       const newState = { ...state, players: newPlayers, duelState: null };
@@ -488,24 +504,17 @@ function reducer(state, action) {
       if (!cross) {
         return afterMove({ ...state, specialTrigger: null }, { type: 'move', ring: trigger.ring, idx: trigger.idx });
       }
-      // Find the MOST pair and jump to parallel ring
-      const pd = playerDef(state.players[state.currentPlayerIndex].color);
-      const pair = pd.mostPairs.find(p =>
-        (p.outerIdx === trigger.idx && trigger.ring === 'outer') ||
-        (p.innerIdx === trigger.idx && trigger.ring === 'inner')
-      );
-      if (!pair) {
+      const dest = getBridgeParallel(trigger.ring, trigger.idx);
+      if (!dest) {
         return afterMove({ ...state, specialTrigger: null }, { type: 'move', ring: trigger.ring, idx: trigger.idx });
       }
-      const destRing = trigger.ring === 'outer' ? 'inner' : 'outer';
-      const destIdx = trigger.ring === 'outer' ? pair.innerIdx : pair.outerIdx;
 
-      let newPlayers = state.players.map(p => ({ ...p, figures: p.figures.map(f => ({ ...f })) }));
+      let newPlayers = deepCopyPlayers(state.players);
       const mover = newPlayers.find(p => p.color === trigger.playerColor);
       const fig = mover.figures.find(f => f.id === trigger.figId);
-      fig.pos = { ring: destRing, idx: destIdx };
+      fig.pos = { ring: dest.ring, idx: dest.idx };
 
-      return afterMove({ ...state, players: newPlayers, specialTrigger: null }, { type: 'move', ring: destRing, idx: destIdx });
+      return afterMove({ ...state, players: newPlayers, specialTrigger: null }, { type: 'move', ring: dest.ring, idx: dest.idx });
     }
 
     case 'RESOLVE_KOCKA': {
@@ -516,7 +525,7 @@ function reducer(state, action) {
       const player = state.players[state.currentPlayerIndex];
       const pd = playerDef(player.color);
 
-      let newPlayers = state.players.map(p => ({ ...p, figures: p.figures.map(f => ({ ...f })) }));
+      let newPlayers = deepCopyPlayers(state.players);
       const mover = newPlayers.find(p => p.color === trigger.playerColor);
       const fig = mover.figures.find(f => f.id === trigger.figId);
       const len = pathLen(trigger.ring);
@@ -543,9 +552,14 @@ function reducer(state, action) {
       }, { type: 'move', ring: trigger.ring, idx: finalIdx });
     }
 
+    case 'DISMISS_SPECIAL_INFO': {
+      const trigger = state.specialTrigger;
+      return afterMove({ ...state, specialTrigger: null }, { type: 'move', ring: trigger.ring, idx: trigger.idx });
+    }
+
     case 'RESOLVE_ZAMJENA': {
       const { trigger, targetColor, targetFigId } = action;
-      let newPlayers = state.players.map(p => ({ ...p, figures: p.figures.map(f => ({ ...f })) }));
+      let newPlayers = deepCopyPlayers(state.players);
       const mover = newPlayers.find(p => p.color === trigger.playerColor);
       const myFig = mover.figures.find(f => f.id === trigger.figId);
       const targetPlayer = newPlayers.find(p => p.color === targetColor);
@@ -573,10 +587,9 @@ function reducer(state, action) {
       if (!special) return state;
       const newSpecials = { ...state.specialsOnBoard };
       delete newSpecials[spKey];
-      const newPlayers = state.players.map(p => {
-        if (p.color === state.players[state.currentPlayerIndex].color) {
-          return { ...p, specialsHeld: [...p.specialsHeld, special.type] };
-        }
+      const currentColor = state.players[state.currentPlayerIndex].color;
+      const newPlayers = deepCopyPlayers(state.players).map(p => {
+        if (p.color === currentColor) p.specialsHeld = [...p.specialsHeld, special.type];
         return p;
       });
       return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'rolling', diceValue: null, rollsLeft: 1 };
@@ -642,6 +655,7 @@ export function useGame(setupPlayers) {
     dispatch({ type: 'RESOLVE_KOCKA', trigger }), []);
   const resolveZamjena = useCallback((trigger, targetColor, targetFigId) =>
     dispatch({ type: 'RESOLVE_ZAMJENA', trigger, targetColor, targetFigId }), []);
+  const dismissSpecialInfo = useCallback(() => dispatch({ type: 'DISMISS_SPECIAL_INFO' }), []);
   const endTurn = useCallback(() => dispatch({ type: 'END_TURN' }), []);
   const initialRoll = useCallback(() => dispatch({ type: 'INITIAL_ROLL' }), []);
   const continueAfterTie = useCallback(() => dispatch({ type: 'CONTINUE_AFTER_TIE' }), []);
@@ -665,6 +679,7 @@ export function useGame(setupPlayers) {
     resolveMost,
     resolveKocka,
     resolveZamjena,
+    dismissSpecialInfo,
     endTurn,
     initialRoll,
     continueAfterTie,
