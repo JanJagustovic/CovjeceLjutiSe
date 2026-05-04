@@ -215,7 +215,7 @@ export default function Board({
         if (isTarget) className += ' board-cell--target';
         content = (
           <>
-            <span className="finish-slot-num">{cell.slot}</span>
+            {figs.length === 0 && <span className="finish-slot-num">{cell.slot}</span>}
             {renderFigures(figsMapped)}
           </>
         );

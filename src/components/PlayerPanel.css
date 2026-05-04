@@ -5,6 +5,7 @@
   padding: 5px var(--sp-md);
   background: var(--bg-secondary);
   border-top: 1px solid var(--border);
+  align-items: center;
 }
 
 .panel-current {
@@ -53,6 +54,7 @@
   display: flex;
   gap: var(--sp-xs);
   flex-wrap: wrap;
+  justify-content: center;
 }
 
 .special-chip {
@@ -81,6 +83,16 @@
   cursor: not-allowed;
   border-color: var(--border);
   text-decoration: line-through;
+}
+
+.special-chip-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+[data-theme='dark'] .special-chip-count {
+  color: #fff;
 }
 
 .special-chip--skip {

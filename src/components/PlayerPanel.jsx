@@ -64,7 +64,7 @@ export default function PlayerPanel({
                 onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
                 title={isDisabled ? t('mostCannotField') : type}
               >
-                {SPECIAL_ICONS[type]}{count > 1 ? `×${count}` : ''}
+                {SPECIAL_ICONS[type]}{count > 1 ? <span className="special-chip-count">×{count}</span> : ''}
               </button>
             );
           })}
