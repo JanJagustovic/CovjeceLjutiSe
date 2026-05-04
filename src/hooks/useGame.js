@@ -186,8 +186,8 @@ export function getValidMoves(state, diceVal) {
     if (typeof fig.pos === 'object' && fig.pos.lane) {
       // In finish lane — advance deeper
       const { lane, color, slot } = fig.pos;
-      const nextSlot = slot + 1;
-      if (nextSlot <= 4 && diceVal === 1) {
+      const nextSlot = slot + diceVal;
+      if (nextSlot <= 4) {
         if (!findFigureInFinish(state.players, color, lane, nextSlot)) {
           moves.push({ figId: fig.id, type: 'finish', lane, color, slot: nextSlot });
         }
