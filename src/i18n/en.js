@@ -33,19 +33,44 @@ const en = {
   colorOrange:  'Orange',
 
   // Game Board
-  gameTurn:        'Current Turn',
-  gameRoll:        'Roll Dice',
-  gameRollsLeft:   'Rolls remaining',
-  gameNoMoves:     'No valid moves',
-  gameChooseExit:  'Choose exit',
-  gameOuterRing:   'Outer ring (longer route)',
-  gameInnerRing:   'Inner ring (shorter route)',
-  gamePlaceSpecial:'Place special square',
-  gameSkip:        'Skip placement',
-  gameWin:         'Winner!',
-  gameWinMsg:      'has won the game!',
-  gamePlayAgain:   'Play Again',
-  gameMainMenu:    'Main Menu',
+  gameTurn:         'Current Turn',
+  gameRoll:         'Roll Dice',
+  gameRollsLeft:    'Rolls remaining',
+  gameNoMoves:      'No valid moves',
+  gameChooseExit:   'Choose exit',
+  gameOuterRing:    'Outer ring (longer route)',
+  gameInnerRing:    'Inner ring (shorter route)',
+  gamePlaceSpecial: 'Place special square',
+  gameSkip:         'Skip placement',
+  gameWin:          'Winner!',
+  gameWinMsg:       'has won the game!',
+  gamePlayAgain:    'Play Again',
+  gameMainMenu:     'Main Menu',
+
+  gamePhaseMoving:  'move',
+  gamePhasePlacing: 'place',
+  gamePhaseDuel:    'duel!',
+
+  duelAttacker:     'Attacker',
+  duelDefender:     'Defender',
+
+  initialRollTitle:  'Who goes first?',
+  initialRollTie:    'Tie — same players roll again!',
+  initialRollStarts: 'starts!',
+  initialRollBtn:    'roll!',
+  initialRollReroll: 'Roll again',
+
+  ok:     'OK',
+  duelVs: 'vs',
+
+  menuFooter: '2–8 players · Dynamic mode',
+
+  zamjenaNoFigs:    'No pieces available to swap.',
+  zamjenaFig:       'Piece',
+  zamjenaSkip:      'Skip',
+
+  mostCannotPlace:  'BRIDGE not possible — no free parallel square',
+  mostCannotField:  'BRIDGE not possible on this square',
 
   // Dice duel
   duelTitle:  'Duel for the square!',

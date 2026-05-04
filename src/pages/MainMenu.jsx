@@ -36,7 +36,7 @@ export default function MainMenu() {
       </nav>
 
       <div className="menu-footer">
-        <span className="menu-footer-text">2–8 igrača · Dinamički mod</span>
+        <span className="menu-footer-text">{t('menuFooter')}</span>
       </div>
     </div>
   );

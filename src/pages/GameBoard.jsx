@@ -153,9 +153,9 @@ export default function GameBoard() {
         <span className="game-turn-label" style={{ color: COLOR_HEX[currentPlayer.color] }}>
           {currentPlayer.name}
           {phase === 'rolling' && ' — 🎲'}
-          {phase === 'moving' && ' — potez'}
-          {phase === 'placing-special' && ' — postavi'}
-          {phase === 'duel' && ' — dvoboj!'}
+          {phase === 'moving' && ` — ${t('gamePhaseMoving')}`}
+          {phase === 'placing-special' && ` — ${t('gamePhasePlacing')}`}
+          {phase === 'duel' && ` — ${t('gamePhaseDuel')}`}
         </span>
         <div style={{ display: 'flex', gap: '2px' }}>
           <button className="btn btn-ghost" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')} style={{ fontSize: '0.8rem', fontWeight: 700 }}>
@@ -203,7 +203,7 @@ export default function GameBoard() {
         <div className="game-controls">
           {isPlacing && selectedSpecialType === 'most' && !mostCanPlace && (
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textAlign: 'center', margin: '2px 0' }}>
-              🌉 MOST nije moguć — nema slobodnog paralelnog polja
+              🌉 {t('mostCannotPlace')}
             </p>
           )}
           {isMoving && validMoves.length === 0 && (
@@ -233,7 +233,7 @@ export default function GameBoard() {
       {isDuel && state.duelState && (
         <Modal title={t('duelTitle')}>
           <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            <span style={{ color: COLOR_HEX[state.duelState.atkColor] }}>●</span> vs{' '}
+            <span style={{ color: COLOR_HEX[state.duelState.atkColor] }}>●</span> {t('duelVs')}{' '}
             <span style={{ color: COLOR_HEX[state.duelState.defColor] }}>●</span>
           </p>
           {duelRolls.atk === null && (
@@ -245,7 +245,7 @@ export default function GameBoard() {
             </button>
           )}
           {duelRolls.atk !== null && (
-            <p>Napadač: <strong>{duelRolls.atk}</strong></p>
+            <p>{t('duelAttacker')}: <strong>{duelRolls.atk}</strong></p>
           )}
           {duelRolls.atk !== null && duelRolls.def === null && (
             <button
@@ -256,7 +256,7 @@ export default function GameBoard() {
             </button>
           )}
           {duelRolls.def !== null && (
-            <p>Branič: <strong>{duelRolls.def}</strong></p>
+            <p>{t('duelDefender')}: <strong>{duelRolls.def}</strong></p>
           )}
         </Modal>
       )}
@@ -282,6 +282,7 @@ export default function GameBoard() {
           onRoll={initialRoll}
           onContinue={continueAfterTie}
           onStart={startGame}
+          t={t}
         />
       )}
 
@@ -347,7 +348,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`⏸️ ${t('specialStop')}`}>
         <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialStopMsg')}</p>
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>OK</button>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
       </Modal>
     );
   }
@@ -356,7 +357,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`⏪ ${t('specialRewind')}`}>
         <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialRewindMsg')}</p>
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>OK</button>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
       </Modal>
     );
   }
@@ -389,7 +390,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
       <Modal title={`🔄 ${t('specialZamjena')}`}>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('specialZamjenaTitle')}</p>
         {eligibleFigs.length === 0 && (
-          <p style={{ color: 'var(--text-muted)' }}>Nema slobodnih figurica za zamjenu.</p>
+          <p style={{ color: 'var(--text-muted)' }}>{t('zamjenaNoFigs')}</p>
         )}
         {eligibleFigs.map(f => (
           <button
@@ -398,10 +399,10 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
             style={{ borderLeft: `4px solid ${COLOR_HEX[f.playerColor]}` }}
             onClick={() => onZamjena(f.playerColor, f.id)}
           >
-            Figurica {f.id + 1}
+            {t('zamjenaFig')} {f.id + 1}
           </button>
         ))}
-        <button className="btn btn-ghost" onClick={() => onZamjena(null, null)}>Preskoči</button>
+        <button className="btn btn-ghost" onClick={() => onZamjena(null, null)}>{t('zamjenaSkip')}</button>
       </Modal>
     );
   }
@@ -409,7 +410,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
   return null;
 }
 
-function InitialRollModal({ state, players, onRoll, onContinue, onStart }) {
+function InitialRollModal({ state, players, onRoll, onContinue, onStart, t }) {
   const COLOR_HEX = {
     red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
     cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
@@ -423,10 +424,10 @@ function InitialRollModal({ state, players, onRoll, onContinue, onStart }) {
   const winner = initialRollWinner ? players.find(p => p.color === initialRollWinner) : null;
 
   return (
-    <Modal title="🎲 Tko ide prvi?">
+    <Modal title={`🎲 ${t('initialRollTitle')}`}>
       {isReroll && (
         <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-          Izjednačeno — isti igrači bacaju opet!
+          {t('initialRollTie')}
         </p>
       )}
 
@@ -462,23 +463,23 @@ function InitialRollModal({ state, players, onRoll, onContinue, onStart }) {
       {winner && (
         <>
           <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem', marginTop: '4px' }}>
-            <span style={{ color: COLOR_HEX[initialRollWinner] }}>{winner.name}</span> počinje!
+            <span style={{ color: COLOR_HEX[initialRollWinner] }}>{winner.name}</span> {t('initialRollStarts')}
           </p>
           <button className="btn btn-primary" style={{ width: '100%' }} onClick={onStart}>
-            🎮 Započni igru!
+            🎮 {t('setupStart')}
           </button>
         </>
       )}
 
       {initialRollTied && !winner && (
         <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onContinue}>
-          🎲 Baci opet
+          🎲 {t('initialRollReroll')}
         </button>
       )}
 
       {!allRolled && (
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={onRoll}>
-          🎲 {currentPlayer?.name} baci!
+          🎲 {currentPlayer?.name} {t('initialRollBtn')}
         </button>
       )}
     </Modal>

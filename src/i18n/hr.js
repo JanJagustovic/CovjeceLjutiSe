@@ -33,19 +33,44 @@ const hr = {
   colorOrange:  'Narančasta',
 
   // Game Board
-  gameTurn:        'Na potezu',
-  gameRoll:        'Baci kocku',
-  gameRollsLeft:   'Bacanja preostalo',
-  gameNoMoves:     'Nema mogućih poteza',
-  gameChooseExit:  'Odaberi izlaz',
-  gameOuterRing:   'Vanjski prsten (dulja ruta)',
-  gameInnerRing:   'Unutarnji prsten (kraća ruta)',
-  gamePlaceSpecial:'Postavi posebno polje',
-  gameSkip:        'Preskoči postavljanje',
-  gameWin:         'Pobijedio!',
-  gameWinMsg:      'je pobijedio igru!',
-  gamePlayAgain:   'Igraj ponovo',
-  gameMainMenu:    'Glavni izbornik',
+  gameTurn:         'Na potezu',
+  gameRoll:         'Baci kocku',
+  gameRollsLeft:    'Bacanja preostalo',
+  gameNoMoves:      'Nema mogućih poteza',
+  gameChooseExit:   'Odaberi izlaz',
+  gameOuterRing:    'Vanjski prsten (dulja ruta)',
+  gameInnerRing:    'Unutarnji prsten (kraća ruta)',
+  gamePlaceSpecial: 'Postavi posebno polje',
+  gameSkip:         'Preskoči postavljanje',
+  gameWin:          'Pobijedio!',
+  gameWinMsg:       'je pobijedio igru!',
+  gamePlayAgain:    'Igraj ponovo',
+  gameMainMenu:     'Glavni izbornik',
+
+  gamePhaseMoving:  'potez',
+  gamePhasePlacing: 'postavi',
+  gamePhaseDuel:    'dvoboj!',
+
+  duelAttacker:     'Napadač',
+  duelDefender:     'Branič',
+
+  initialRollTitle:  'Tko ide prvi?',
+  initialRollTie:    'Izjednačeno — isti igrači bacaju opet!',
+  initialRollStarts: 'počinje!',
+  initialRollBtn:    'baci!',
+  initialRollReroll: 'Baci opet',
+
+  ok:     'OK',
+  duelVs: 'vs',
+
+  menuFooter: '2–8 igrača · Dinamički mod',
+
+  zamjenaNoFigs:    'Nema slobodnih figurica za zamjenu.',
+  zamjenaFig:       'Figurica',
+  zamjenaSkip:      'Preskoči',
+
+  mostCannotPlace:  'MOST nije moguć — nema slobodnog paralelnog polja',
+  mostCannotField:  'MOST nije moguć na ovom polju',
 
   // Dice duel
   duelTitle:   'Dvoboj za polje!',

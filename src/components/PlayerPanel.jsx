@@ -62,7 +62,7 @@ export default function PlayerPanel({
                 key={type}
                 className={`special-chip ${selectedSpecial === type ? 'special-chip--selected' : ''} ${phase === 'placing-special' ? 'special-chip--active' : ''} ${isDisabled ? 'special-chip--disabled' : ''}`}
                 onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
-                title={isDisabled ? 'MOST nije moguć na ovom polju' : type}
+                title={isDisabled ? t('mostCannotField') : type}
               >
                 {SPECIAL_ICONS[type]}{count > 1 ? `×${count}` : ''}
               </button>

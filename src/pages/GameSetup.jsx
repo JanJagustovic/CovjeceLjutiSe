@@ -11,10 +11,10 @@ const COLOR_HEX = {
   cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
 };
 
-function initPlayers(count) {
+function initPlayers(count, label) {
   return ALL_COLORS.slice(0, count).map((color, i) => ({
     id: i,
-    name: `Igrač ${i + 1}`,
+    name: `${label} ${i + 1}`,
     color,
   }));
 }
@@ -23,12 +23,12 @@ export default function GameSetup() {
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [count, setCount] = useState(4);
-  const [players, setPlayers] = useState(() => initPlayers(4));
+  const [players, setPlayers] = useState(() => initPlayers(4, t('setupPlayerName')));
 
   function handleCountChange(n) {
     setCount(n);
     setPlayers(prev => {
-      const next = initPlayers(n);
+      const next = initPlayers(n, t('setupPlayerName'));
       // keep custom names if player existed
       return next.map((p, i) => prev[i] ? { ...p, name: prev[i].name } : p);
     });
