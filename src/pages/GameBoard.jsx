@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGame } from '../hooks/useGame.js';
-import { canPlaceMost } from '../data/boardLayout.js';
+import { canPlaceMost, OUTER_PATH, INNER_PATH } from '../data/boardLayout.js';
 import Board from '../components/Board/Board.jsx';
 import PlayerPanel from '../components/PlayerPanel.jsx';
 import Modal from '../components/Modal.jsx';
@@ -373,7 +373,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
   }
 
   if (trigger.type === 'kocka') {
-    return <KockaModal t={t} onKocka={onKocka} />;
+    return <KockaModal key={`${trigger.ring}-${trigger.idx}`} t={t} onKocka={onKocka} />;
   }
 
   if (trigger.type === 'zamjena') {
@@ -392,16 +392,23 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
         {eligibleFigs.length === 0 && (
           <p style={{ color: 'var(--text-muted)' }}>{t('zamjenaNoFigs')}</p>
         )}
-        {eligibleFigs.map(f => (
-          <button
-            key={f.id}
-            className="btn btn-secondary"
-            style={{ borderLeft: `4px solid ${COLOR_HEX[f.playerColor]}` }}
-            onClick={() => onZamjena(f.playerColor, f.id)}
-          >
-            {t('zamjenaFig')} {f.id + 1}
-          </button>
-        ))}
+        {eligibleFigs.map(f => {
+          const path = f.pos.ring === 'outer' ? OUTER_PATH : INNER_PATH;
+          const { r, c } = path[f.pos.idx];
+          return (
+            <button
+              key={f.id}
+              className="btn btn-secondary"
+              style={{ borderLeft: `4px solid ${COLOR_HEX[f.playerColor]}`, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '2px' }}
+              onClick={() => onZamjena(f.playerColor, f.id)}
+            >
+              <span style={{ fontWeight: 700 }}>{t('zamjenaFig')} {f.id + 1}</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
+                ({r}, {c})
+              </span>
+            </button>
+          );
+        })}
         <button className="btn btn-ghost" onClick={() => onZamjena(null, null)}>{t('zamjenaSkip')}</button>
       </Modal>
     );

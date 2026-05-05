@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { PLAYER_ORDER } from '../data/boardLayout';
 import './GameSetup.css';
 
@@ -21,7 +22,8 @@ function initPlayers(count, label) {
 
 export default function GameSetup() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [count, setCount] = useState(4);
   const [players, setPlayers] = useState(() => initPlayers(4, t('setupPlayerName')));
 
@@ -56,6 +58,14 @@ export default function GameSetup() {
       <div className="setup-header">
         <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
         <h2 className="setup-title">{t('setupTitle')}</h2>
+        <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto' }}>
+          <button className="btn btn-ghost" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+            {lang === 'hr' ? 'EN' : 'HR'}
+          </button>
+          <button className="btn btn-ghost" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
       </div>
 
       <div className="setup-scroll">

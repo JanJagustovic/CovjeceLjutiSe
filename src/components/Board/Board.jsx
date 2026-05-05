@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { GRID, PLAYERS, OUTER_PATH, INNER_PATH } from '../../data/boardLayout.js';
+import { GRID, PLAYERS, OUTER_PATH, INNER_PATH, getBridgeParallel } from '../../data/boardLayout.js';
 import './Board.css';
 
 const CENTER_PIPS = {
@@ -109,6 +109,56 @@ function getFiguresOnFinish(allPlayers, colorKey, lane, slot) {
 }
 
 
+function BridgeOverlay({ specialsOnBoard }) {
+  const bridges = Object.entries(specialsOnBoard || {})
+    .filter(([, v]) => v.type === 'most')
+    .flatMap(([key]) => {
+      const parts = key.split('-');
+      const ring = parts[0];
+      const idx = Number(parts[1]);
+      const path = ring === 'outer' ? OUTER_PATH : INNER_PATH;
+      const { r: r1, c: c1 } = path[idx];
+      const dest = getBridgeParallel(ring, idx);
+      if (!dest) return [];
+      const path2 = dest.ring === 'outer' ? OUTER_PATH : INNER_PATH;
+      const { r: r2, c: c2 } = path2[dest.idx];
+
+      // Draw edge-to-edge so the line only spans the margin, not over the cells
+      let ex1, ey1, ex2, ey2;
+      if (r1 !== r2) {
+        ex1 = c1 + 0.5; ex2 = c2 + 0.5;
+        ey1 = r1 < r2 ? r1 + 1 : r1;
+        ey2 = r2 < r1 ? r2 + 1 : r2;
+      } else {
+        ey1 = r1 + 0.5; ey2 = r2 + 0.5;
+        ex1 = c1 < c2 ? c1 + 1 : c1;
+        ex2 = c2 < c1 ? c2 + 1 : c2;
+      }
+
+      return [{ x1: ex1, y1: ey1, x2: ex2, y2: ey2, key }];
+    });
+
+  if (!bridges.length) return null;
+
+  return (
+    <svg
+      className="bridge-overlay"
+      viewBox="0 0 19 19"
+      preserveAspectRatio="none"
+    >
+      {bridges.map(({ x1, y1, x2, y2, key }) => (
+        <g key={key}>
+          <line x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke="#7a4a10" strokeWidth="0.55" strokeLinecap="butt" opacity="0.9" />
+          <line x1={x1} y1={y1} x2={x2} y2={y2}
+            stroke="#f5c842" strokeWidth="0.22" strokeLinecap="butt"
+            strokeDasharray="0.35 0.25" opacity="0.9" />
+        </g>
+      ))}
+    </svg>
+  );
+}
+
 function Figure({ playerColor, figId, isSelected, isMoveable, isStop, isRewind, onClick }) {
   const extra = isStop ? ' figure--stop' : isRewind ? ' figure--rewind' : '';
   return (
@@ -184,6 +234,12 @@ export default function Board({
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
           specialBadge = figs.length > 0;
+        } else {
+          const dest = getBridgeParallel('outer', cell.outerIdx);
+          if (dest && specialsOnBoard?.[`${dest.ring}-${dest.idx}`]?.type === 'most') {
+            specialIcon = SPECIAL_ICONS['most'];
+            specialBadge = figs.length > 0;
+          }
         }
         const isTarget = validTargets?.some(t => t.ring === 'outer' && t.idx === cell.outerIdx);
         if (isTarget) className += ' board-cell--target';
@@ -194,6 +250,12 @@ export default function Board({
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
           specialBadge = figs.length > 0;
+        } else {
+          const dest = getBridgeParallel('inner', cell.innerIdx);
+          if (dest && specialsOnBoard?.[`${dest.ring}-${dest.idx}`]?.type === 'most') {
+            specialIcon = SPECIAL_ICONS['most'];
+            specialBadge = figs.length > 0;
+          }
         }
         const isTarget = validTargets?.some(t => t.ring === 'inner' && t.idx === cell.innerIdx);
         if (isTarget) className += ' board-cell--target';
@@ -250,6 +312,7 @@ export default function Board({
     <div className="board-wrapper">
       <div className="board-grid">
         {cells}
+        <BridgeOverlay specialsOnBoard={specialsOnBoard} />
       </div>
       {onRoll && (
         <CenterDie

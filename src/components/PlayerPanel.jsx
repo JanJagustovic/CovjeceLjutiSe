@@ -52,32 +52,30 @@ export default function PlayerPanel({
         </div>
       </div>
 
-      {/* Specials in hand */}
-      {(current.specialsHeld.length > 0 || phase === 'placing-special') && (
-        <div className="panel-specials">
-          {Object.entries(specialCounts).map(([type, count]) => {
-            const isDisabled = phase === 'placing-special' && type === 'most' && mostCanPlace === false;
-            return (
-              <button
-                key={type}
-                className={`special-chip ${selectedSpecial === type ? 'special-chip--selected' : ''} ${phase === 'placing-special' ? 'special-chip--active' : ''} ${isDisabled ? 'special-chip--disabled' : ''}`}
-                onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
-                title={isDisabled ? t('mostCannotField') : type}
-              >
-                {SPECIAL_ICONS[type]}{count > 1 ? <span className="special-chip-count">×{count}</span> : ''}
-              </button>
-            );
-          })}
-          {phase === 'placing-special' && (
+      {/* Specials in hand — always rendered to keep panel height constant */}
+      <div className="panel-specials">
+        {Object.entries(specialCounts).map(([type, count]) => {
+          const isDisabled = phase === 'placing-special' && type === 'most' && mostCanPlace === false;
+          return (
             <button
-              className="special-chip special-chip--skip"
-              onClick={onSkipPlaceSpecial}
+              key={type}
+              className={`special-chip ${selectedSpecial === type ? 'special-chip--selected' : ''} ${phase === 'placing-special' ? 'special-chip--active' : ''} ${isDisabled ? 'special-chip--disabled' : ''}`}
+              onClick={() => phase === 'placing-special' && onSelectSpecialForPlace?.(type)}
+              title={isDisabled ? t('mostCannotField') : type}
             >
-              ✕
+              {SPECIAL_ICONS[type]}{count > 1 ? <span className="special-chip-count">×{count}</span> : ''}
             </button>
-          )}
-        </div>
-      )}
+          );
+        })}
+        {phase === 'placing-special' && (
+          <button
+            className="special-chip special-chip--skip"
+            onClick={onSkipPlaceSpecial}
+          >
+            ✕
+          </button>
+        )}
+      </div>
 
       {/* All players strip */}
       <div className="panel-players-strip">

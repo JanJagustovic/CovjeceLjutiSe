@@ -55,6 +55,8 @@
   gap: var(--sp-xs);
   flex-wrap: wrap;
   justify-content: center;
+  min-height: 30px;
+  align-items: center;
 }
 
 .special-chip {

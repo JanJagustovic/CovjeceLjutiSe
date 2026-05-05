@@ -5,15 +5,20 @@ import './MainMenu.css';
 
 export default function MainMenu() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="menu-page page">
       <div className="menu-header">
-        <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+        <div style={{ display: 'flex', gap: '2px' }}>
+          <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+            {lang === 'hr' ? 'EN' : 'HR'}
+          </button>
+          <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
+        </div>
       </div>
 
       <div className="menu-hero">

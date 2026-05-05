@@ -126,11 +126,11 @@ export function getValidMoves(state, diceVal) {
         // Can exit to outer or inner ring
         const pd = playerDef(player.color);
         const outerOcc = findFigureOnCell(state.players, 'outer', pd.exitOuter);
-        if (!outerOcc || outerOcc.player.color !== player.color) {
+        if (!outerOcc) {
           moves.push({ figId: fig.id, type: 'exit', ring: 'outer', idx: pd.exitOuter });
         }
         const innerOcc = findFigureOnCell(state.players, 'inner', pd.exitInner);
-        if (!innerOcc || innerOcc.player.color !== player.color) {
+        if (!innerOcc) {
           moves.push({ figId: fig.id, type: 'exit', ring: 'inner', idx: pd.exitInner });
         }
       }
@@ -281,6 +281,22 @@ function applyMove(state, move) {
         playerColor: player.color,
         placedBy: state.specialsOnBoard[spKey].placedBy,
       };
+    } else if (!duelState) {
+      // Bridge is bidirectional: also trigger if the parallel cell has a most special
+      const parallel = getBridgeParallel(move.ring, move.idx);
+      if (parallel) {
+        const parallelKey = `${parallel.ring}-${parallel.idx}`;
+        if (state.specialsOnBoard[parallelKey]?.type === 'most') {
+          specialTrigger = {
+            type: 'most',
+            ring: move.ring,
+            idx: move.idx,
+            figId: move.figId,
+            playerColor: player.color,
+            placedBy: state.specialsOnBoard[parallelKey].placedBy,
+          };
+        }
+      }
     }
   }
 
@@ -306,8 +322,11 @@ function afterMove(state, move) {
   const hasSpecials = player.specialsHeld.length > 0;
   const spKey = `${move.ring}-${move.idx}`;
   const activeColors = state.players.map(p => p.color);
+  const parallel = move.ring ? getBridgeParallel(move.ring, move.idx) : null;
+  const parallelHasBridge = parallel && state.specialsOnBoard[`${parallel.ring}-${parallel.idx}`]?.type === 'most';
   const validPlacement = hasSpecials && (move.type === 'move' || move.type === 'exit') &&
     !state.specialsOnBoard[spKey] &&
+    !parallelHasBridge &&
     canPlaceSpecial(move.ring, move.idx, activeColors);
 
   if (validPlacement) {
@@ -350,6 +369,22 @@ function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
       placedBy: state.specialsOnBoard[spKey].placedBy,
     };
     return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
+  }
+  // Bidirectional bridge: also trigger if the parallel cell has a most special
+  const parallel = getBridgeParallel(ring, idx);
+  if (parallel) {
+    const parallelKey = `${parallel.ring}-${parallel.idx}`;
+    if (state.specialsOnBoard[parallelKey]?.type === 'most') {
+      const trigger = {
+        type: 'most',
+        ring,
+        idx,
+        figId,
+        playerColor,
+        placedBy: state.specialsOnBoard[parallelKey].placedBy,
+      };
+      return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
+    }
   }
   return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
 }
@@ -548,10 +583,32 @@ function reducer(state, action) {
       const fig = mover.figures.find(f => f.id === trigger.figId);
       fig.pos = { ring: dest.ring, idx: dest.idx };
 
-      return afterLanding(
-        { ...state, specialTrigger: null },
-        newPlayers, dest.ring, dest.idx, trigger.figId, trigger.playerColor
+      const baseState = { ...state, specialTrigger: null, players: newPlayers };
+
+      // Check for duel at destination, but skip special re-trigger —
+      // the destination may be the bridge cell itself and would loop back.
+      const occupied = findFigureOnCell(
+        newPlayers.filter(p => p.color !== trigger.playerColor),
+        dest.ring, dest.idx
       );
+      if (occupied) {
+        return {
+          ...baseState,
+          duelState: {
+            atkColor: trigger.playerColor,
+            defColor: occupied.player.color,
+            ring: dest.ring,
+            idx: dest.idx,
+            figId: trigger.figId,
+            defFigId: occupied.figure.id,
+            atkRoll: null,
+            defRoll: null,
+          },
+          phase: 'duel',
+        };
+      }
+
+      return afterMove(baseState, { type: 'move', ring: dest.ring, idx: dest.idx });
     }
 
     case 'RESOLVE_KOCKA': {
