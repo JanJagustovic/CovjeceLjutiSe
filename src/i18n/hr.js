@@ -9,9 +9,10 @@ const hr = {
   navBack:     'Natrag',
 
   // Main Menu
-  menuPlay:      'Igraj',
-  menuRules:     'Pravila igre',
-  menuSettings:  'Postavke',
+  menuPlay:        'Igraj',
+  menuMultiplayer: 'Višeigračka',
+  menuRules:       'Pravila igre',
+  menuSettings:    'Postavke',
 
   // Game Setup
   setupTitle:       'Nova igra',
@@ -112,6 +113,23 @@ const hr = {
   settingsThemeLight:'Svijetla',
   settingsLang:     'Jezik',
   settingsSaved:    'Spremljeno',
+
+  // Lobby / Multiplayer
+  lobbyCreate:          'Stvori sobu',
+  lobbyCreateBtn:       'Stvori sobu',
+  lobbyJoin:            'Pridruži se sobi',
+  lobbyJoinBtn:         'Pridruži se',
+  lobbyOr:              'ili',
+  lobbyCodePlaceholder: 'Unesi kod',
+  lobbyRoomCode:        'Kod sobe',
+  lobbyShareCode:       'Podijeli ovaj kod s prijateljima',
+  lobbyPlayers:         'Igrači',
+  lobbyYou:             'ti',
+  lobbyWaitingPlayers:  'Čekanje na najmanje 2 igrača…',
+  lobbyWaitingHost:     'Čekanje da domaćin pokrene igru…',
+
+  // Online game
+  onlineNotYourTurn:    'Čekaj na svoj potez',
 };
 
 export default hr;

@@ -21,20 +21,21 @@ function loadSetup() {
   } catch { return null; }
 }
 
-export default function GameBoard() {
+export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   const navigate = useNavigate();
   const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
 
   const setup = loadSetup();
   useEffect(() => {
-    if (!setup) navigate('/setup');
+    if (!gameHook && !setup) navigate('/setup');
   }, []);
 
+  const localHook = useGame(setup?.players || []);
   const { state, currentPlayer, validMoves, rollDice, selectMove,
     skipPlaceSpecial, placeSpecial, resolveDuel, resolveMost, resolveKocka, resolveZamjena,
     dismissSpecialInfo, endTurn, initialRoll, continueAfterTie, startGame,
-  } = useGame(setup?.players || []);
+  } = gameHook ?? localHook;
 
   const [selectedSpecialType, setSelectedSpecialType] = useState(null);
   const [duelRolls, setDuelRolls] = useState({ atk: null, def: null });
@@ -77,6 +78,7 @@ export default function GameBoard() {
       : [];
 
   function handleFigureClick(playerColor, figId) {
+    if (!isMyTurn) return;
     if (!isMoving) return;
     if (playerColor !== currentPlayer.color) return;
     // If multiple moves for this figure, pick first (or handle multi-move selection)
@@ -141,7 +143,7 @@ export default function GameBoard() {
     }
   }
 
-  if (!setup) return null;
+  if (!gameHook && !setup) return null;
 
   return (
     <div className="gameboard-page page">
@@ -179,7 +181,7 @@ export default function GameBoard() {
           currentPlayerColor={currentPlayer.color}
           onRoll={rollDice}
           diceValue={state.diceValue}
-          diceDisabled={!isRolling}
+          diceDisabled={!isRolling || !isMyTurn}
           rollsLeft={state.rollsLeft}
         />
       </div>

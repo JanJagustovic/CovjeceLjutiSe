@@ -32,6 +32,9 @@ export default function MainMenu() {
         <button className="btn btn-primary btn-lg menu-btn" onClick={() => navigate('/setup')}>
           🎮 {t('menuPlay')}
         </button>
+        <button className="btn btn-secondary btn-lg menu-btn" onClick={() => navigate('/lobby')}>
+          🌐 {t('menuMultiplayer')}
+        </button>
         <button className="btn btn-secondary btn-lg menu-btn" onClick={() => navigate('/rules')}>
           📖 {t('menuRules')}
         </button>

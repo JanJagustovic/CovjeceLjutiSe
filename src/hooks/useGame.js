@@ -727,10 +727,15 @@ function reducer(state, action) {
       };
     }
 
+    case 'SYNC':
+      return action.state;
+
     default:
       return state;
   }
 }
+
+export { reducer, initState };
 
 export function useGame(setupPlayers) {
   const [state, dispatch] = useReducer(reducer, setupPlayers, initState);

@@ -9,9 +9,10 @@ const en = {
   navBack:     'Back',
 
   // Main Menu
-  menuPlay:     'Play',
-  menuRules:    'Game Rules',
-  menuSettings: 'Settings',
+  menuPlay:        'Play',
+  menuMultiplayer: 'Multiplayer',
+  menuRules:       'Game Rules',
+  menuSettings:    'Settings',
 
   // Game Setup
   setupTitle:      'New Game',
@@ -112,6 +113,23 @@ const en = {
   settingsThemeLight:'Light',
   settingsLang:      'Language',
   settingsSaved:     'Saved',
+
+  // Lobby / Multiplayer
+  lobbyCreate:          'Create Room',
+  lobbyCreateBtn:       'Create Room',
+  lobbyJoin:            'Join Room',
+  lobbyJoinBtn:         'Join',
+  lobbyOr:              'or',
+  lobbyCodePlaceholder: 'Enter code',
+  lobbyRoomCode:        'Room Code',
+  lobbyShareCode:       'Share this code with friends',
+  lobbyPlayers:         'Players',
+  lobbyYou:             'you',
+  lobbyWaitingPlayers:  'Waiting for at least 2 players…',
+  lobbyWaitingHost:     'Waiting for host to start…',
+
+  // Online game
+  onlineNotYourTurn:    "Wait for your turn",
 };
 
 export default en;

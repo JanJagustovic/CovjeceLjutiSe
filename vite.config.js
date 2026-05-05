@@ -10,7 +10,7 @@ export default defineConfig({
       includeAssets: ['favicon.ico', 'favicon.svg', 'logo192.png', 'logo512.png'],
       manifest: {
         name: 'Čovječe ljuti se',
-        short_name: 'Čovječe',
+        short_name: 'Čovječe ljuti se',
         description: 'Digitalna verzija igre Čovječe ljuti se',
         theme_color: '#1a1a2e',
         background_color: '#1a1a2e',
