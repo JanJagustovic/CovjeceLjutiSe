@@ -10,7 +10,7 @@ const en = {
 
   // Main Menu
   menuPlay:        'Play',
-  menuMultiplayer: 'Multiplayer',
+  menuMultiplayer: 'Online',
   menuRules:       'Game Rules',
   menuSettings:    'Settings',
 

@@ -10,7 +10,7 @@ const hr = {
 
   // Main Menu
   menuPlay:        'Igraj',
-  menuMultiplayer: 'Višeigračka',
+  menuMultiplayer: 'Online',
   menuRules:       'Pravila igre',
   menuSettings:    'Postavke',
 
