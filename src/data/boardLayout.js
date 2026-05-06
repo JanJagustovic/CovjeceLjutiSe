@@ -265,10 +265,11 @@ export function getBridgeParallel(ring, idx) {
 
 // Check if a MOST bridge can be placed at (ring, idx).
 // Returns the destination {ring, idx} on success, or null if invalid.
-export function canPlaceMost(ring, idx, specialsOnBoard) {
+export function canPlaceMost(ring, idx, bridgesOnBoard) {
+  if (bridgesOnBoard?.[`${ring}-${idx}`]) return null;
   const dest = getBridgeParallel(ring, idx);
   if (!dest) return null;
-  if (specialsOnBoard?.[`${dest.ring}-${dest.idx}`]) return null;
+  if (bridgesOnBoard?.[`${dest.ring}-${dest.idx}`]) return null;
   return dest;
 }
 

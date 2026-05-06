@@ -17,6 +17,7 @@ export default function PlayerPanel({
   onSelectSpecialForPlace,
   selectedSpecial,
   mostCanPlace,
+  spawnPointOnly,
   onSkipPlaceSpecial,
   t,
 }) {
@@ -55,7 +56,10 @@ export default function PlayerPanel({
       {/* Specials in hand — always rendered to keep panel height constant */}
       <div className="panel-specials">
         {Object.entries(specialCounts).map(([type, count]) => {
-          const isDisabled = phase === 'placing-special' && type === 'most' && mostCanPlace === false;
+          const isDisabled = phase === 'placing-special' && (
+            (type === 'most' && mostCanPlace === false) ||
+            (type !== 'most' && spawnPointOnly)
+          );
           return (
             <button
               key={type}

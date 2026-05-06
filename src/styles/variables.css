@@ -50,6 +50,7 @@
   --board-empty:  #e8e8e8;
   --board-path:   #f0f0f0;
   --board-border: #999999;
+  --target-highlight: rgba(255, 235, 59, 0.45);
 
   --shadow: 0 2px 12px rgba(0,0,0,0.12);
   --shadow-lg: 0 6px 24px rgba(0,0,0,0.18);
@@ -77,6 +78,7 @@
   --board-empty:  #1e1e30;
   --board-path:   #33334a;
   --board-border: #444460;
+  --target-highlight: rgba(255, 235, 59, 0.45);
 
   --shadow: 0 2px 12px rgba(0,0,0,0.4);
   --shadow-lg: 0 6px 24px rgba(0,0,0,0.55);

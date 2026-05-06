@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGame } from '../hooks/useGame.js';
-import { canPlaceMost, OUTER_PATH, INNER_PATH } from '../data/boardLayout.js';
+import { canPlaceMost, OUTER_PATH, INNER_PATH, PLAYERS } from '../data/boardLayout.js';
 import Board from '../components/Board/Board.jsx';
 import PlayerPanel from '../components/PlayerPanel.jsx';
 import Modal from '../components/Modal.jsx';
@@ -53,8 +53,19 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
   // Whether MOST can be placed at the current landed cell
   const mostCanPlace = isPlacing && state.lastMoveRing
-    ? !!canPlaceMost(state.lastMoveRing, state.lastMoveIdx, state.specialsOnBoard)
+    ? !!canPlaceMost(state.lastMoveRing, state.lastMoveIdx, state.bridgesOnBoard)
     : true;
+
+  // Spawn points only allow bridge placement
+  const isSpawnPointLanding = isPlacing && state.lastMoveRing != null
+    ? state.players.some(p => {
+        const pd = PLAYERS[p.color];
+        return pd && (
+          (state.lastMoveRing === 'outer' && state.lastMoveIdx === pd.exitOuter) ||
+          (state.lastMoveRing === 'inner' && state.lastMoveIdx === pd.exitInner)
+        );
+      })
+    : false;
 
   // Auto-advance after showing the dice result when there are no valid moves
   useEffect(() => {
@@ -174,6 +185,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
         <Board
           gamePlayers={state.players}
           specialsOnBoard={state.specialsOnBoard}
+          bridgesOnBoard={state.bridgesOnBoard}
           moveableFigures={moveableFigures}
           validTargets={validTargets}
           onFigureClick={handleFigureClick}
@@ -195,10 +207,12 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           diceValue={state.diceValue}
           onSelectSpecialForPlace={type => {
             if (type === 'most' && !mostCanPlace) return;
+            if (type !== 'most' && isSpawnPointLanding) return;
             setSelectedSpecialType(type === selectedSpecialType ? null : type);
           }}
           selectedSpecial={selectedSpecialType}
           mostCanPlace={mostCanPlace}
+          spawnPointOnly={isSpawnPointLanding}
           onSkipPlaceSpecial={() => { setSelectedSpecialType(null); skipPlaceSpecial(); }}
           t={t}
         />

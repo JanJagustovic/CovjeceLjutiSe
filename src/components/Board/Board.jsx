@@ -109,9 +109,8 @@ function getFiguresOnFinish(allPlayers, colorKey, lane, slot) {
 }
 
 
-function BridgeOverlay({ specialsOnBoard }) {
-  const bridges = Object.entries(specialsOnBoard || {})
-    .filter(([, v]) => v.type === 'most')
+function BridgeOverlay({ bridgesOnBoard }) {
+  const bridges = Object.entries(bridgesOnBoard || {})
     .flatMap(([key]) => {
       const parts = key.split('-');
       const ring = parts[0];
@@ -159,14 +158,14 @@ function BridgeOverlay({ specialsOnBoard }) {
   );
 }
 
-function Figure({ playerColor, figId, isSelected, isMoveable, isStop, isRewind, onClick }) {
-  const extra = isStop ? ' figure--stop' : isRewind ? ' figure--rewind' : '';
+function Figure({ playerColor, figId, isSelected, isMoveable, isStop, isRewind, isBomb, onClick }) {
+  const extra = isStop ? ' figure--stop' : isRewind ? ' figure--rewind' : isBomb ? ' figure--bomb' : '';
   return (
     <div
       className={`figure${isSelected ? ' figure--selected' : ''}${isMoveable ? ' figure--moveable' : ''}${extra}`}
       style={{ backgroundColor: COLOR_HEX[playerColor] }}
       onClick={onClick}
-      title={`${playerColor} #${figId}${isStop ? ' ⏸️' : isRewind ? ' ⏪' : ''}`}
+      title={`${playerColor} #${figId}${isStop ? ' ⏸️' : isRewind ? ' ⏪' : isBomb ? ' 💣' : ''}`}
     />
   );
 }
@@ -174,6 +173,7 @@ function Figure({ playerColor, figId, isSelected, isMoveable, isStop, isRewind, 
 export default function Board({
   gamePlayers,
   specialsOnBoard,
+  bridgesOnBoard,
   selectedFigure,
   moveableFigures,
   validTargets,
@@ -207,6 +207,7 @@ export default function Board({
               isMoveable={isMoveable}
               isStop={!!fig.stopActive}
               isRewind={!!fig.rewindNext}
+              isBomb={!!fig.bombActive}
               onClick={() => onFigureClick?.(fig.playerColor, fig.id)}
             />
           );
@@ -231,12 +232,15 @@ export default function Board({
       if (cell.type === 'outer-path') {
         const spKey = `outer-${cell.outerIdx}`;
         const figs = getFiguresOnCell('outer', cell.outerIdx, players);
+        // Non-bridge special takes priority for the icon; bridge shown on parallel cell too
         if (specialsOnBoard?.[spKey]) {
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
           specialBadge = figs.length > 0;
         } else {
+          const hasBridge = bridgesOnBoard?.[spKey];
           const dest = getBridgeParallel('outer', cell.outerIdx);
-          if (dest && specialsOnBoard?.[`${dest.ring}-${dest.idx}`]?.type === 'most') {
+          const parallelHasBridge = dest && bridgesOnBoard?.[`${dest.ring}-${dest.idx}`];
+          if (hasBridge || parallelHasBridge) {
             specialIcon = SPECIAL_ICONS['most'];
             specialBadge = figs.length > 0;
           }
@@ -251,8 +255,10 @@ export default function Board({
           specialIcon = SPECIAL_ICONS[specialsOnBoard[spKey].type];
           specialBadge = figs.length > 0;
         } else {
+          const hasBridge = bridgesOnBoard?.[spKey];
           const dest = getBridgeParallel('inner', cell.innerIdx);
-          if (dest && specialsOnBoard?.[`${dest.ring}-${dest.idx}`]?.type === 'most') {
+          const parallelHasBridge = dest && bridgesOnBoard?.[`${dest.ring}-${dest.idx}`];
+          if (hasBridge || parallelHasBridge) {
             specialIcon = SPECIAL_ICONS['most'];
             specialBadge = figs.length > 0;
           }
@@ -312,7 +318,7 @@ export default function Board({
     <div className="board-wrapper">
       <div className="board-grid">
         {cells}
-        <BridgeOverlay specialsOnBoard={specialsOnBoard} />
+        <BridgeOverlay bridgesOnBoard={bridgesOnBoard} />
       </div>
       {onRoll && (
         <CenterDie

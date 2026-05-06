@@ -14,10 +14,10 @@ function rollD6() {
 
 function initFigures() {
   return [
-    { id: 0, pos: 'home', rewindNext: false, stopActive: false },
-    { id: 1, pos: 'home', rewindNext: false, stopActive: false },
-    { id: 2, pos: 'home', rewindNext: false, stopActive: false },
-    { id: 3, pos: 'home', rewindNext: false, stopActive: false },
+    { id: 0, pos: 'home', rewindNext: false, stopActive: false, bombActive: null },
+    { id: 1, pos: 'home', rewindNext: false, stopActive: false, bombActive: null },
+    { id: 2, pos: 'home', rewindNext: false, stopActive: false, bombActive: null },
+    { id: 3, pos: 'home', rewindNext: false, stopActive: false, bombActive: null },
   ];
 }
 
@@ -36,6 +36,7 @@ function initState(setupPlayers) {
     bonusRoll: false,
     phase: 'initial-roll',
     specialsOnBoard: {},
+    bridgesOnBoard: {},
     duelState: null,
     specialTrigger: null,
     exitChoice: null,
@@ -200,9 +201,6 @@ export function getValidMoves(state, diceVal) {
 
 // ── Reducer ────────────────────────────────────────────────────────────────
 
-function addLog(state, msg) {
-  return { ...state, log: [msg, ...state.log.slice(0, 19)] };
-}
 
 function advanceTurn(state) {
   let nextIdx = (state.currentPlayerIndex + 1) % state.players.length;
@@ -233,9 +231,10 @@ function applyMove(state, move) {
   const mover = newPlayers.find(p => p.color === player.color);
   const fig = mover.figures.find(f => f.id === move.figId);
 
-  // Clear rewind/stop flags on move
+  // Clear flags on move
   fig.rewindNext = false;
   fig.stopActive = false;
+  fig.bombActive = null; // escaped the bomb by moving
 
   if (move.type === 'exit') {
     fig.pos = { ring: move.ring, idx: move.idx };
@@ -245,6 +244,15 @@ function applyMove(state, move) {
   } else if (move.type === 'finish') {
     fig.pos = { lane: move.lane, color: move.color, slot: move.slot };
   }
+
+  // Detonate any other armed figures of the current player that weren't moved
+  mover.figures.filter(f => f.id !== move.figId && f.bombActive).forEach(armed => {
+    mover.specialsHeld = [...mover.specialsHeld, 'bomba'];
+    armed.pos = 'home';
+    armed.stopActive = false;
+    armed.rewindNext = false;
+    armed.bombActive = null;
+  });
 
   // Check for capture (only on path, not on finish/home)
   let duelState = null;
@@ -281,19 +289,28 @@ function applyMove(state, move) {
         playerColor: player.color,
         placedBy: state.specialsOnBoard[spKey].placedBy,
       };
-    } else if (!duelState) {
-      // Bridge is bidirectional: also trigger if the parallel cell has a most special
+    } else if (!duelState && move.type !== 'exit') {
+      // Bridge: check direct cell first, then parallel cell
       const parallel = getBridgeParallel(move.ring, move.idx);
-      if (parallel) {
+      if (state.bridgesOnBoard[spKey]) {
+        specialTrigger = {
+          type: 'most',
+          ring: move.ring,
+          idx: move.idx,
+          figId: move.figId,
+          playerColor: player.color,
+          placedBy: state.bridgesOnBoard[spKey].placedBy,
+        };
+      } else if (parallel) {
         const parallelKey = `${parallel.ring}-${parallel.idx}`;
-        if (state.specialsOnBoard[parallelKey]?.type === 'most') {
+        if (state.bridgesOnBoard[parallelKey]) {
           specialTrigger = {
             type: 'most',
             ring: move.ring,
             idx: move.idx,
             figId: move.figId,
             playerColor: player.color,
-            placedBy: state.specialsOnBoard[parallelKey].placedBy,
+            placedBy: state.bridgesOnBoard[parallelKey].placedBy,
           };
         }
       }
@@ -320,14 +337,22 @@ function applyMove(state, move) {
 function afterMove(state, move) {
   const player = state.players[state.currentPlayerIndex];
   const hasSpecials = player.specialsHeld.length > 0;
+  const hasBridge = player.specialsHeld.includes('most');
   const spKey = `${move.ring}-${move.idx}`;
   const activeColors = state.players.map(p => p.color);
-  const parallel = move.ring ? getBridgeParallel(move.ring, move.idx) : null;
-  const parallelHasBridge = parallel && state.specialsOnBoard[`${parallel.ring}-${parallel.idx}`]?.type === 'most';
-  const validPlacement = hasSpecials && (move.type === 'move' || move.type === 'exit') &&
-    !state.specialsOnBoard[spKey] &&
-    !parallelHasBridge &&
-    canPlaceSpecial(move.ring, move.idx, activeColors);
+  const isSpawnPoint = typeof move.ring === 'string' && activeColors.some(color => {
+    const pd = PLAYERS[color];
+    return pd && (
+      (move.ring === 'outer' && move.idx === pd.exitOuter) ||
+      (move.ring === 'inner' && move.idx === pd.exitInner)
+    );
+  });
+  const validPlacement = (move.type === 'move' || move.type === 'exit') &&
+    !state.specialsOnBoard[spKey] && (
+      isSpawnPoint
+        ? hasBridge && !!canPlaceMost(move.ring, move.idx, state.bridgesOnBoard)
+        : hasSpecials && canPlaceSpecial(move.ring, move.idx, activeColors)
+    );
 
   if (validPlacement) {
     return { ...state, phase: 'placing-special', lastMoveRing: move.ring, lastMoveIdx: move.idx };
@@ -370,18 +395,30 @@ function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
     };
     return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
   }
-  // Bidirectional bridge: also trigger if the parallel cell has a most special
+  // Bridge: check direct cell first, then parallel cell
   const parallel = getBridgeParallel(ring, idx);
+  const bridgeKey = spKey;
+  if (state.bridgesOnBoard[bridgeKey]) {
+    const trigger = {
+      type: 'most',
+      ring,
+      idx,
+      figId,
+      playerColor,
+      placedBy: state.bridgesOnBoard[bridgeKey].placedBy,
+    };
+    return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
+  }
   if (parallel) {
     const parallelKey = `${parallel.ring}-${parallel.idx}`;
-    if (state.specialsOnBoard[parallelKey]?.type === 'most') {
+    if (state.bridgesOnBoard[parallelKey]) {
       const trigger = {
         type: 'most',
         ring,
         idx,
         figId,
         playerColor,
-        placedBy: state.specialsOnBoard[parallelKey].placedBy,
+        placedBy: state.bridgesOnBoard[parallelKey].placedBy,
       };
       return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
     }
@@ -396,19 +433,12 @@ function applySpecialTrigger(state, trigger) {
   const spKey = `${ring}-${idx}`;
 
   if (type === 'bomba') {
-    // Figure goes home; bomb returns to placer's hand
+    // Arm the figure — it must be moved next turn or it detonates
     const mover = newPlayers.find(p => p.color === playerColor);
     const fig = mover.figures.find(f => f.id === figId);
-    fig.pos = 'home';
-    fig.stopActive = false;
-    fig.rewindNext = false;
+    fig.bombActive = { placedBy: trigger.placedBy };
     delete newSpecials[spKey];
-    mover.specialsHeld = [...mover.specialsHeld, 'bomba'];
-    return advanceTurn({
-      ...state,
-      players: newPlayers,
-      specialsOnBoard: newSpecials,
-    });
+    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'special-trigger', specialTrigger: trigger };
   }
 
   if (type === 'stop') {
@@ -486,7 +516,10 @@ function reducer(state, action) {
     case 'PLACE_SPECIAL': {
       const { ring, idx, specialType } = action;
       const player = state.players[state.currentPlayerIndex];
-      if (specialType === 'most' && !canPlaceMost(ring, idx, state.specialsOnBoard)) {
+      if (specialType === 'most' && !canPlaceMost(ring, idx, state.bridgesOnBoard)) {
+        return state;
+      }
+      if (specialType !== 'most' && !canPlaceSpecial(ring, idx, state.players.map(p => p.color))) {
         return state;
       }
       const newPlayers = deepCopyPlayers(state.players).map(p => {
@@ -496,11 +529,18 @@ function reducer(state, action) {
         return p;
       });
       const spKey = `${ring}-${idx}`;
-      const newSpecials = { ...state.specialsOnBoard, [spKey]: { type: specialType, placedBy: player.color } };
+
+      // Bridges go into bridgesOnBoard (permanent); all other specials into specialsOnBoard
+      const newSpecials = specialType === 'most'
+        ? state.specialsOnBoard
+        : { ...state.specialsOnBoard, [spKey]: { type: specialType, placedBy: player.color } };
+      const newBridges = specialType === 'most'
+        ? { ...state.bridgesOnBoard, [spKey]: { placedBy: player.color } }
+        : state.bridgesOnBoard;
 
       // Check if figure on this cell is immediately affected (rule 9c)
       const figHere = findFigureOnCell(newPlayers, ring, idx);
-      let nextState = { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'moving' };
+      let nextState = { ...state, players: newPlayers, specialsOnBoard: newSpecials, bridgesOnBoard: newBridges, phase: 'moving' };
 
       if (figHere && figHere.player.color !== player.color) {
         // Immediate activation on opponent's figure
@@ -542,6 +582,7 @@ function reducer(state, action) {
       loserFig.pos = 'home';
       loserFig.stopActive = false;
       loserFig.rewindNext = false;
+      loserFig.bombActive = null;
 
       const attackerWon = atkRoll > defRoll;
       const newState = { ...state, players: newPlayers, duelState: null };
@@ -551,7 +592,7 @@ function reducer(state, action) {
         return advanceTurn(newState);
       }
 
-      // Attacker won — check special square on the duel cell
+      // Attacker won — check special square on the duel cell (non-bridge first, then bridge)
       const spKey = `${duelState.ring}-${duelState.idx}`;
       if (newState.specialsOnBoard[spKey]) {
         const trigger = {
@@ -566,6 +607,8 @@ function reducer(state, action) {
       }
 
       return afterMove(newState, { type: 'move', ring: duelState.ring, idx: duelState.idx });
+      // Note: bridge check happens inside afterMove → afterLanding is not called here,
+      // but afterMove triggers bridge via the standard landing path.
     }
 
     case 'RESOLVE_MOST': {
@@ -606,6 +649,19 @@ function reducer(state, action) {
           },
           phase: 'duel',
         };
+      }
+
+      // Trigger special on destination cell (skip bridge check to prevent infinite loop)
+      const destKey = `${dest.ring}-${dest.idx}`;
+      if (baseState.specialsOnBoard[destKey]) {
+        return applySpecialTrigger(baseState, {
+          type: baseState.specialsOnBoard[destKey].type,
+          ring: dest.ring,
+          idx: dest.idx,
+          figId: trigger.figId,
+          playerColor: trigger.playerColor,
+          placedBy: baseState.specialsOnBoard[destKey].placedBy,
+        });
       }
 
       return afterMove(baseState, { type: 'move', ring: dest.ring, idx: dest.idx });
@@ -656,16 +712,29 @@ function reducer(state, action) {
       const mover = newPlayers.find(p => p.color === trigger.playerColor);
       const myFig = mover.figures.find(f => f.id === trigger.figId);
       const targetPlayer = newPlayers.find(p => p.color === targetColor);
+      let swapped = false;
       if (targetPlayer) {
         const targetFig = targetPlayer.figures.find(f => f.id === targetFigId);
         if (targetFig && typeof targetFig.pos === 'object' && targetFig.pos.ring) {
           const oldPos = myFig.pos;
           myFig.pos = targetFig.pos;
           targetFig.pos = oldPos;
+          // Both figures moved — clear their status flags
+          myFig.stopActive = false;
+          myFig.rewindNext = false;
+          myFig.bombActive = null;
+          targetFig.stopActive = false;
+          targetFig.rewindNext = false;
+          targetFig.bombActive = null;
+          swapped = true;
         }
       }
-      return afterMove({ ...state, players: newPlayers, specialTrigger: null },
-        { type: 'move', ring: trigger.ring, idx: trigger.idx });
+      const baseState = { ...state, players: newPlayers, specialTrigger: null };
+      // Check specials/collision at the active figure's new position
+      if (swapped && typeof myFig.pos === 'object' && myFig.pos.ring) {
+        return afterLanding(baseState, newPlayers, myFig.pos.ring, myFig.pos.idx, trigger.figId, trigger.playerColor);
+      }
+      return afterMove(baseState, { type: 'move', ring: trigger.ring, idx: trigger.idx });
     }
 
     case 'END_TURN': {

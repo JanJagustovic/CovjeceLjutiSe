@@ -94,7 +94,7 @@ const en = {
   specialZamjenaTitle: 'Swap piece',
   specialZamjenaRoll:  'Roll dice to choose color',
 
-  specialBombaMsg:    'Bomb! Piece returns home.',
+  specialBombaMsg:    'Bomb! Move this piece next turn or it goes home.',
   specialStopMsg:     'Stop! Piece can only move by 1.',
   specialRewindMsg:   'Rewind! Next move goes backward.',
   specialKockaMsg:    'Dice! Roll two dice.',
