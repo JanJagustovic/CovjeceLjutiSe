@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import './Dice.css';
 
 const PIPS = {
@@ -27,6 +27,17 @@ function DieFace({ value, size = 36 }) {
 
 export default function Dice({ value, secondValue, onRoll, disabled, rollsLeft }) {
   const [rolling, setRolling] = useState(false);
+  const prevValueRef = useRef(value);
+
+  useEffect(() => {
+    const prev = prevValueRef.current;
+    prevValueRef.current = value;
+    if (value && !prev) {
+      setRolling(true);
+      const t = setTimeout(() => setRolling(false), 600);
+      return () => clearTimeout(t);
+    }
+  }, [value]);
 
   function handleRoll() {
     if (disabled || rolling) return;

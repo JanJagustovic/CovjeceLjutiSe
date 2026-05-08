@@ -3,11 +3,8 @@ import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase';
 import { reducer, initState, getValidMoves } from './useGame';
 
-export function useOnlineGame(setupPlayers, roomId, myUid) {
+export function useOnlineGame(setupPlayers, roomId) {
   const [state, dispatch] = useReducer(reducer, setupPlayers, initState);
-
-  // Prevents write→snapshot→write loops
-  const isWritingRef       = useRef(false);
   const lastRemoteStateRef = useRef(null);
 
   // Firestore → local: apply remote state when it changes
@@ -17,7 +14,6 @@ export function useOnlineGame(setupPlayers, roomId, myUid) {
       if (!snap.exists()) return;
       const remote = snap.data().gameState;
       if (!remote) return;
-      if (isWritingRef.current) return;
       const str = JSON.stringify(remote);
       if (str === lastRemoteStateRef.current) return;
       lastRemoteStateRef.current = str;
@@ -25,23 +21,20 @@ export function useOnlineGame(setupPlayers, roomId, myUid) {
     });
   }, [roomId]);
 
-  // Local → Firestore: write after each state change when it's my turn
+  // Local → Firestore: write on every state change, deduped against last known remote
   useEffect(() => {
     if (!roomId) return;
-    const currentUid = state.players[state.currentPlayerIndex]?.uid;
-    if (currentUid !== myUid) return;
-    if (isWritingRef.current) return;
     const str = JSON.stringify(state);
     if (str === lastRemoteStateRef.current) return;
-    isWritingRef.current = true;
+    lastRemoteStateRef.current = str;
     updateDoc(doc(db, 'rooms', roomId), {
       gameState: state,
       updatedAt: serverTimestamp(),
-    }).finally(() => {
-      isWritingRef.current = false;
-      lastRemoteStateRef.current = str;
+    }).catch(err => {
+      console.error('Firestore write failed:', err);
+      lastRemoteStateRef.current = null;
     });
-  }, [state, roomId, myUid]);
+  }, [state, roomId]);
 
   const rollDice           = useCallback(() => dispatch({ type: 'ROLL_DICE' }), []);
   const selectMove         = useCallback(move => dispatch({ type: 'SELECT_MOVE', move }), []);

@@ -21,7 +21,7 @@ export default function LobbyRoom() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || loading) return;
     return onSnapshot(doc(db, 'rooms', roomId), (snap) => {
       if (!snap.exists()) { navigate('/lobby'); return; }
       const data = { id: snap.id, ...snap.data() };
@@ -30,7 +30,7 @@ export default function LobbyRoom() {
         navigate(`/online/${roomId}`);
       }
     });
-  }, [roomId]);
+  }, [roomId, loading]);
 
   // Join: add this user to players[] once we have both room and user
   useEffect(() => {

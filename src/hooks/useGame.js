@@ -26,6 +26,7 @@ function initState(setupPlayers) {
     players: setupPlayers.map(sp => ({
       color: sp.color,
       name: sp.name,
+      uid: sp.uid ?? null,
       figures: initFigures(),
       specialsHeld: distributeSpecials(setupPlayers.length),
     })),

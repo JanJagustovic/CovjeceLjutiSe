@@ -13,12 +13,12 @@ export default function OnlineGameBoard() {
   const [room, setRoom] = useState(null);
 
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || loading) return;
     return onSnapshot(doc(db, 'rooms', roomId), (snap) => {
       if (!snap.exists()) { navigate('/'); return; }
       setRoom({ id: snap.id, ...snap.data() });
     });
-  }, [roomId]);
+  }, [roomId, loading]);
 
   if (loading || !room || !user) {
     return <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -42,10 +42,12 @@ function OnlineGameBoardInner({ room, roomId, myUid }) {
     uid: p.uid,
   }));
 
-  const gameHook = useOnlineGame(setupPlayers, roomId, myUid);
+  const gameHook = useOnlineGame(setupPlayers, roomId);
 
-  const currentPlayerUid = room.players[gameHook.state.currentPlayerIndex]?.uid;
-  const isMyTurn = currentPlayerUid === myUid;
+  const myColor = room.players.find(p => p.uid === myUid)?.color;
+  const isMyTurn = gameHook.state.phase === 'initial-roll'
+    ? myColor === gameHook.state.initialRollOrder[gameHook.state.initialRollIdx]
+    : room.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
 
   return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} />;
 }

@@ -309,7 +309,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
         <InitialRollModal
           state={state}
           players={state.players}
-          onRoll={initialRoll}
+          onRoll={isMyTurn ? initialRoll : null}
           onContinue={continueAfterTie}
           onStart={startGame}
           t={t}
@@ -524,7 +524,7 @@ function InitialRollModal({ state, players, onRoll, onContinue, onStart, t }) {
       )}
 
       {!allRolled && (
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onRoll}>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onRoll} disabled={!onRoll}>
           🎲 {currentPlayer?.name} {t('initialRollBtn')}
         </button>
       )}
