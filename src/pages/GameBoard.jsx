@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useGame } from '../hooks/useGame.js';
+import { usePinchZoom } from '../hooks/usePinchZoom.js';
 import { canPlaceMost, OUTER_PATH, INNER_PATH, PLAYERS } from '../data/boardLayout.js';
 import Board from '../components/Board/Board.jsx';
 import PlayerPanel from '../components/PlayerPanel.jsx';
@@ -36,6 +37,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     skipPlaceSpecial, placeSpecial, resolveDuel, resolveMost, resolveKocka, resolveZamjena,
     dismissSpecialInfo, endTurn, initialRoll, continueAfterTie, startGame,
   } = gameHook ?? localHook;
+
+  const { containerRef: boardAreaRef, transform: boardTransform } = usePinchZoom();
 
   const [selectedSpecialType, setSelectedSpecialType] = useState(null);
   const [duelRolls, setDuelRolls] = useState({ atk: null, def: null });
@@ -182,21 +185,31 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
       </div>
 
       {/* Board */}
-      <div className="game-board-area">
-        <Board
-          gamePlayers={state.players}
-          specialsOnBoard={state.specialsOnBoard}
-          bridgesOnBoard={state.bridgesOnBoard}
-          moveableFigures={moveableFigures}
-          validTargets={validTargets}
-          onFigureClick={handleFigureClick}
-          onCellClick={handleCellClick}
-          currentPlayerColor={currentPlayer.color}
-          onRoll={rollDice}
-          diceValue={state.diceValue}
-          diceDisabled={!isRolling || !isMyTurn}
-          rollsLeft={state.rollsLeft}
-        />
+      <div className="game-board-area" ref={boardAreaRef}>
+        <div style={{
+          transform: `translate(${boardTransform.x}px, ${boardTransform.y}px) scale(${boardTransform.scale})`,
+          transformOrigin: 'center center',
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <Board
+            gamePlayers={state.players}
+            specialsOnBoard={state.specialsOnBoard}
+            bridgesOnBoard={state.bridgesOnBoard}
+            moveableFigures={moveableFigures}
+            validTargets={validTargets}
+            onFigureClick={handleFigureClick}
+            onCellClick={handleCellClick}
+            currentPlayerColor={currentPlayer.color}
+            onRoll={rollDice}
+            diceValue={state.diceValue}
+            diceDisabled={!isRolling || !isMyTurn}
+            rollsLeft={state.rollsLeft}
+          />
+        </div>
       </div>
 
       {/* Bottom panel */}
