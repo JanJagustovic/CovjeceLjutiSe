@@ -127,6 +127,11 @@ const hr = {
   lobbyYou:             'ti',
   lobbyWaitingPlayers:  'Čekanje na najmanje 2 igrača…',
   lobbyWaitingHost:     'Čekanje da domaćin pokrene igru…',
+  lobbySignInPrompt:    'Prijavi se za igranje online',
+  lobbySignInGoogle:    'Prijavi se s Googleom',
+  lobbySignOut:         'Odjava',
+  lobbyCreateError:     'Greška pri stvaranju sobe. Provjeri vezu.',
+  lobbyJoinError:       'Greška pri pridruživanju. Pokušaj ponovo.',
 
   // Online game
   onlineNotYourTurn:    'Čekaj na svoj potez',

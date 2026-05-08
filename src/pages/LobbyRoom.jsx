@@ -44,7 +44,7 @@ export default function LobbyRoom() {
 
     const entry = {
       uid: user.uid,
-      name: `${t('setupPlayerName')} ${room.players.length + 1}`,
+      name: user.displayName || user.email?.split('@')[0] || `${t('setupPlayerName')} ${room.players.length + 1}`,
       color: availableColor,
       index: room.players.length,
     };

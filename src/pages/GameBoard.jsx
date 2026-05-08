@@ -80,7 +80,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
   const validTargets = isMoving
     ? validMoves.map(m => {
-        if (m.type === 'move' || m.type === 'exit') return { ring: m.ring, idx: m.idx };
+        if (m.type === 'move' || m.type === 'exit' || m.type === 'pickup') return { ring: m.ring, idx: m.idx };
         if (m.type === 'finish') return { lane: m.lane, color: m.color, slot: m.slot };
         return null;
       }).filter(Boolean)
@@ -92,21 +92,22 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     if (!isMyTurn) return;
     if (!isMoving) return;
     if (playerColor !== currentPlayer.color) return;
-    // If multiple moves for this figure, pick first (or handle multi-move selection)
-    const move = validMoves.find(m => m.figId === figId);
-    if (!move) return;
-    // If exit move, need ring choice
+    const figureMoves = validMoves.filter(m => m.figId === figId);
+    if (figureMoves.length === 0) return;
+    const move = figureMoves[0];
     if (move.type === 'exit') {
-      const allExitMoves = validMoves.filter(m => m.figId === figId && m.type === 'exit');
-      if (allExitMoves.length > 1) {
-        // Will be shown via modal below — just set state
-        setExitChoiceFig({ figId, playerColor, moves: allExitMoves });
+      const exitMoves = figureMoves.filter(m => m.type === 'exit');
+      if (exitMoves.length > 1) {
+        setExitChoiceFig({ figId, playerColor, moves: exitMoves });
       } else {
         selectMove(move);
       }
-    } else {
-      selectMove(move);
+      return;
     }
+    // Both pickup and regular move available — don't auto-execute,
+    // player clicks the highlighted target cell to choose
+    if (figureMoves.some(m => m.type === 'pickup') && figureMoves.some(m => m.type === 'move')) return;
+    selectMove(move);
   }
 
   const [exitChoiceFig, setExitChoiceFig] = useState(null);
@@ -373,6 +374,15 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`⏪ ${t('specialRewind')}`}>
         <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialRewindMsg')}</p>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
+      </Modal>
+    );
+  }
+
+  if (trigger.type === 'bomba') {
+    return (
+      <Modal title={`💣 ${t('specialBomba')}`}>
+        <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialBombaMsg')}</p>
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
       </Modal>
     );

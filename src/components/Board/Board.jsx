@@ -158,11 +158,11 @@ function BridgeOverlay({ bridgesOnBoard }) {
   );
 }
 
-function Figure({ playerColor, figId, isSelected, isMoveable, isStop, isRewind, isBomb, onClick }) {
+function Figure({ playerColor, figId, isMoveable, isStop, isRewind, isBomb, onClick }) {
   const extra = isStop ? ' figure--stop' : isRewind ? ' figure--rewind' : isBomb ? ' figure--bomb' : '';
   return (
     <div
-      className={`figure${isSelected ? ' figure--selected' : ''}${isMoveable ? ' figure--moveable' : ''}${extra}`}
+      className={`figure${isMoveable ? ' figure--moveable' : ''}${extra}`}
       style={{ backgroundColor: COLOR_HEX[playerColor] }}
       onClick={onClick}
       title={`${playerColor} #${figId}${isStop ? ' ⏸️' : isRewind ? ' ⏪' : isBomb ? ' 💣' : ''}`}
@@ -174,7 +174,6 @@ export default function Board({
   gamePlayers,
   specialsOnBoard,
   bridgesOnBoard,
-  selectedFigure,
   moveableFigures,
   validTargets,
   onFigureClick,
@@ -192,9 +191,6 @@ export default function Board({
     return (
       <div className={`figures-group ${isHome ? 'figures-group--home' : ''}`}>
         {figures.map((fig) => {
-          const isSelected = selectedFigure &&
-            selectedFigure.figId === fig.id &&
-            selectedFigure.playerColor === fig.playerColor;
           const isMoveable = moveableFigures?.some(
             m => m.figId === fig.id && m.playerColor === fig.playerColor
           );
@@ -203,7 +199,6 @@ export default function Board({
               key={`${fig.playerColor}-${fig.id}`}
               playerColor={fig.playerColor}
               figId={fig.id}
-              isSelected={isSelected}
               isMoveable={isMoveable}
               isStop={!!fig.stopActive}
               isRewind={!!fig.rewindNext}

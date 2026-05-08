@@ -119,6 +119,14 @@ export function getValidMoves(state, diceVal) {
   const moves = [];
 
   player.figures.forEach(fig => {
+    // Pickup: dice = 6, figure standing on a special square (stop restriction doesn't block this)
+    if (diceVal === 6 && typeof fig.pos === 'object' && fig.pos.ring) {
+      const spKey = `${fig.pos.ring}-${fig.pos.idx}`;
+      if (state.specialsOnBoard[spKey]) {
+        moves.push({ figId: fig.id, type: 'pickup', ring: fig.pos.ring, idx: fig.pos.idx });
+      }
+    }
+
     // STOP: can only move if dice = 1
     if (fig.stopActive && diceVal !== 1) return;
 
@@ -227,14 +235,42 @@ function deepCopyPlayers(players) {
 
 function applyMove(state, move) {
   const player = state.players[state.currentPlayerIndex];
+
+  if (move.type === 'pickup') {
+    const spKey = `${move.ring}-${move.idx}`;
+    const special = state.specialsOnBoard[spKey];
+    if (!special) return state;
+    let newPlayers = deepCopyPlayers(state.players);
+    const mover = newPlayers.find(p => p.color === player.color);
+    const fig = mover.figures.find(f => f.id === move.figId);
+    fig.stopActive = false;
+    fig.rewindNext = false;
+    fig.bombActive = null; // using this piece this turn saves it from detonation
+    mover.specialsHeld = [...mover.specialsHeld, special.type];
+    const newSpecials = { ...state.specialsOnBoard };
+    delete newSpecials[spKey];
+    mover.figures.filter(f => f.id !== move.figId && f.bombActive).forEach(armed => {
+      if (typeof armed.pos === 'object' && armed.pos.ring) {
+        delete newSpecials[`${armed.pos.ring}-${armed.pos.idx}`];
+      }
+      mover.specialsHeld = [...mover.specialsHeld, 'bomba'];
+      armed.pos = 'home';
+      armed.stopActive = false;
+      armed.rewindNext = false;
+      armed.bombActive = null;
+    });
+    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'rolling', diceValue: null, bonusRoll: false, rollsLeft: 1 };
+  }
+
   let newPlayers = deepCopyPlayers(state.players);
+  let newSpecials = { ...state.specialsOnBoard };
   const mover = newPlayers.find(p => p.color === player.color);
   const fig = mover.figures.find(f => f.id === move.figId);
 
   // Clear flags on move
   fig.rewindNext = false;
   fig.stopActive = false;
-  fig.bombActive = null; // escaped the bomb by moving
+  fig.bombActive = null; // escaped the bomb by moving (bomb remains on the square)
 
   if (move.type === 'exit') {
     fig.pos = { ring: move.ring, idx: move.idx };
@@ -247,6 +283,9 @@ function applyMove(state, move) {
 
   // Detonate any other armed figures of the current player that weren't moved
   mover.figures.filter(f => f.id !== move.figId && f.bombActive).forEach(armed => {
+    if (typeof armed.pos === 'object' && armed.pos.ring) {
+      delete newSpecials[`${armed.pos.ring}-${armed.pos.idx}`];
+    }
     mover.specialsHeld = [...mover.specialsHeld, 'bomba'];
     armed.pos = 'home';
     armed.stopActive = false;
@@ -280,14 +319,14 @@ function applyMove(state, move) {
   if (move.type === 'move' || move.type === 'exit') {
     // Check special square — applies even on rewind moves
     const spKey = `${move.ring}-${move.idx}`;
-    if (!duelState && state.specialsOnBoard[spKey]) {
+    if (!duelState && newSpecials[spKey]) {
       specialTrigger = {
-        type: state.specialsOnBoard[spKey].type,
+        type: newSpecials[spKey].type,
         ring: move.ring,
         idx: move.idx,
         figId: move.figId,
         playerColor: player.color,
-        placedBy: state.specialsOnBoard[spKey].placedBy,
+        placedBy: newSpecials[spKey].placedBy,
       };
     } else if (!duelState && move.type !== 'exit') {
       // Bridge: check direct cell first, then parallel cell
@@ -320,18 +359,18 @@ function applyMove(state, move) {
   // Check win
   const winner = newPlayers.find(isWinner);
   if (winner) {
-    return { ...state, players: newPlayers, winner: winner.color, phase: 'game-over' };
+    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, winner: winner.color, phase: 'game-over' };
   }
 
   if (duelState) {
-    return { ...state, players: newPlayers, duelState, phase: 'duel' };
+    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, duelState, phase: 'duel' };
   }
 
   if (specialTrigger) {
-    return applySpecialTrigger({ ...state, players: newPlayers }, specialTrigger);
+    return applySpecialTrigger({ ...state, players: newPlayers, specialsOnBoard: newSpecials }, specialTrigger);
   }
 
-  return afterMove({ ...state, players: newPlayers }, move);
+  return afterMove({ ...state, players: newPlayers, specialsOnBoard: newSpecials }, move);
 }
 
 function afterMove(state, move) {
@@ -433,12 +472,12 @@ function applySpecialTrigger(state, trigger) {
   const spKey = `${ring}-${idx}`;
 
   if (type === 'bomba') {
-    // Arm the figure — it must be moved next turn or it detonates
+    // Arm the figure — it must be moved next turn or it detonates.
+    // The bomb stays on the square until the piece escapes (moves away) or detonates.
     const mover = newPlayers.find(p => p.color === playerColor);
     const fig = mover.figures.find(f => f.id === figId);
     fig.bombActive = { placedBy: trigger.placedBy };
-    delete newSpecials[spKey];
-    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'special-trigger', specialTrigger: trigger };
+    return { ...state, players: newPlayers, phase: 'special-trigger', specialTrigger: trigger };
   }
 
   if (type === 'stop') {
@@ -702,8 +741,11 @@ function reducer(state, action) {
     }
 
     case 'DISMISS_SPECIAL_INFO': {
-      const trigger = state.specialTrigger;
-      return afterMove({ ...state, specialTrigger: null }, { type: 'move', ring: trigger.ring, idx: trigger.idx });
+      const newState = { ...state, specialTrigger: null };
+      if (newState.bonusRoll) {
+        return { ...newState, phase: 'rolling', diceValue: null, bonusRoll: false, rollsLeft: 1 };
+      }
+      return advanceTurn(newState);
     }
 
     case 'RESOLVE_ZAMJENA': {
@@ -739,22 +781,6 @@ function reducer(state, action) {
 
     case 'END_TURN': {
       return advanceTurn(state);
-    }
-
-    case 'PICKUP_SPECIAL': {
-      // When player rolls 6 and picks up a special from a cell (rule 9d)
-      const { ring, idx } = action;
-      const spKey = `${ring}-${idx}`;
-      const special = state.specialsOnBoard[spKey];
-      if (!special) return state;
-      const newSpecials = { ...state.specialsOnBoard };
-      delete newSpecials[spKey];
-      const currentColor = state.players[state.currentPlayerIndex].color;
-      const newPlayers = deepCopyPlayers(state.players).map(p => {
-        if (p.color === currentColor) p.specialsHeld = [...p.specialsHeld, special.type];
-        return p;
-      });
-      return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'rolling', diceValue: null, rollsLeft: 1 };
     }
 
     case 'INITIAL_ROLL': {

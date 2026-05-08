@@ -198,26 +198,21 @@
 .figure--moveable {
   cursor: pointer;
   animation: pulse 1s ease-in-out infinite;
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--target-highlight);
-}
-
-.figure--selected {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #4CAF50;
-  transform: scale(1.2);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(33, 150, 243, 0.9);
 }
 
 .figure--stop {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(255, 152, 0, 0.9);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(229, 57, 53, 0.9);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
 .figure--rewind {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(33, 150, 243, 0.9);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(229, 57, 53, 0.9);
   animation: pulse 1.4s ease-in-out infinite;
 }
 
 .figure--bomb {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(255, 87, 34, 0.9);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgba(229, 57, 53, 0.9);
   animation: pulse 0.7s ease-in-out infinite;
 }
 

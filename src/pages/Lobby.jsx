@@ -8,6 +8,11 @@ import { useTheme } from '../contexts/ThemeContext';
 import { PLAYER_ORDER } from '../data/boardLayout';
 import './Lobby.css';
 
+const COLOR_HEX = {
+  red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
+  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
+};
+
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
@@ -15,13 +20,12 @@ function generateCode() {
 
 export default function Lobby() {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, signInWithGoogle, signOut } = useAuth();
   const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const [joinCode, setJoinCode]   = useState('');
-  const [playerName, setPlayerName] = useState('');
-  const [error, setError]         = useState('');
-  const [busy, setBusy]           = useState(false);
+  const [joinCode, setJoinCode] = useState('');
+  const [error, setError]       = useState('');
+  const [busy, setBusy]         = useState(false);
 
   if (loading) return <div className="page lobby-page"><p>...</p></div>;
 
@@ -47,7 +51,7 @@ export default function Lobby() {
     setError('');
     try {
       const code = generateCode();
-      const name = playerName.trim() || `${t('setupPlayerName')} 1`;
+      const name = user.displayName || user.email?.split('@')[0] || t('setupPlayerName');
       const docRef = await addDoc(collection(db, 'rooms'), {
         code,
         hostUid: user.uid,
@@ -60,7 +64,7 @@ export default function Lobby() {
       navigate(`/lobby/${docRef.id}`);
     } catch (err) {
       console.error(err);
-      setError('Failed to create room. Check your connection.');
+      setError(t('lobbyCreateError'));
     } finally {
       setBusy(false);
     }
@@ -82,38 +86,61 @@ export default function Lobby() {
       navigate(`/lobby/${snap.docs[0].id}`);
     } catch (err) {
       console.error(err);
-      setError('Failed to join. Try again.');
+      setError(t('lobbyJoinError'));
     } finally {
       setBusy(false);
     }
   }
 
-  return (
-    <div className="page lobby-page">
-      <div className="lobby-header">
-        <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
-        <div style={{ display: 'flex', gap: '2px' }}>
-          <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
-            {lang === 'hr' ? 'EN' : 'HR'}
-          </button>
-          <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
-            {theme === 'dark' ? '☀️' : '🌙'}
+  const header = (
+    <div className="lobby-header">
+      <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
+      <div style={{ display: 'flex', gap: '2px' }}>
+        <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+          {lang === 'hr' ? 'EN' : 'HR'}
+        </button>
+        <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+          {theme === 'dark' ? '☀️' : '🌙'}
+        </button>
+      </div>
+    </div>
+  );
+
+  if (!user) {
+    return (
+      <div className="page lobby-page">
+        {header}
+        <div className="lobby-content">
+          <h2 className="lobby-title">{t('menuMultiplayer')}</h2>
+          <p style={{ color: 'var(--text-secondary)', textAlign: 'center', marginBottom: '24px' }}>
+            {t('lobbySignInPrompt')}
+          </p>
+          <button className="btn btn-primary btn-lg lobby-google-btn" onClick={signInWithGoogle}>
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="" width="20" height="20" />
+            {t('lobbySignInGoogle')}
           </button>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="page lobby-page">
+      {header}
 
       <div className="lobby-content">
         <h2 className="lobby-title">{t('menuMultiplayer')}</h2>
 
+        <div className="lobby-user-row">
+          {user.photoURL && <img src={user.photoURL} alt="" className="lobby-user-avatar" referrerPolicy="no-referrer" />}
+          <span className="lobby-user-name">{user.displayName || user.email}</span>
+          <button className="btn btn-ghost" style={{ fontSize: '0.8rem' }} onClick={signOut}>
+            {t('lobbySignOut')}
+          </button>
+        </div>
+
         <section className="lobby-section">
           <h3 className="lobby-section-title">{t('lobbyCreate')}</h3>
-          <input
-            className="player-name-input"
-            placeholder={`${t('setupPlayerName')} 1`}
-            value={playerName}
-            maxLength={16}
-            onChange={e => setPlayerName(e.target.value)}
-          />
           <button className="btn btn-primary btn-lg" onClick={handleCreate} disabled={busy}>
             {t('lobbyCreateBtn')}
           </button>

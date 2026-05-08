@@ -127,6 +127,11 @@ const en = {
   lobbyYou:             'you',
   lobbyWaitingPlayers:  'Waiting for at least 2 players…',
   lobbyWaitingHost:     'Waiting for host to start…',
+  lobbySignInPrompt:    'Sign in to play online',
+  lobbySignInGoogle:    'Sign in with Google',
+  lobbySignOut:         'Sign out',
+  lobbyCreateError:     'Failed to create room. Check your connection.',
+  lobbyJoinError:       'Failed to join. Try again.',
 
   // Online game
   onlineNotYourTurn:    "Wait for your turn",
