@@ -116,6 +116,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   const [exitChoiceFig, setExitChoiceFig] = useState(null);
 
   function handleCellClick({ cell }) {
+    if (!isMyTurn) return;
     // Tap a target cell to select move
     if (isMoving) {
       if (cell.type === 'outer-path') {
@@ -144,6 +145,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   }
 
   function handleDuelRoll(who) {
+    if (!isMyTurn) return;
     const val = Math.floor(Math.random() * 6) + 1;
     const newRolls = who === 'atk'
       ? { ...duelRolls, atk: val }
@@ -220,6 +222,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           phase={phase}
           diceValue={state.diceValue}
           onSelectSpecialForPlace={type => {
+            if (!isMyTurn) return;
             if (type === 'most' && !mostCanPlace) return;
             if (type !== 'most' && isSpawnPointLanding) return;
             setSelectedSpecialType(type === selectedSpecialType ? null : type);
@@ -227,7 +230,12 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           selectedSpecial={selectedSpecialType}
           mostCanPlace={mostCanPlace}
           spawnPointOnly={isSpawnPointLanding}
-          onSkipPlaceSpecial={() => { setSelectedSpecialType(null); skipPlaceSpecial(); }}
+          onSkipPlaceSpecial={() => { if (!isMyTurn) return; setSelectedSpecialType(null); skipPlaceSpecial(); }}
+          onConfirmPlaceSpecial={() => {
+            if (!isMyTurn || !selectedSpecialType || !state.lastMoveRing) return;
+            placeSpecial(state.lastMoveRing, state.lastMoveIdx, selectedSpecialType);
+            setSelectedSpecialType(null);
+          }}
           t={t}
         />
         <div className="game-controls">
@@ -236,7 +244,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
               🌉 {t('mostCannotPlace')}
             </p>
           )}
-          {isMoving && validMoves.length === 0 && (
+          {isMoving && validMoves.length === 0 && isMyTurn && (
             <button className="btn btn-secondary" onClick={skipPlaceSpecial}>
               {t('gameNoMoves')} →
             </button>
@@ -270,6 +278,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
             <button
               className="btn btn-primary"
               onClick={() => handleDuelRoll('atk')}
+              disabled={!isMyTurn}
             >
               🎲 {state.players.find(p => p.color === state.duelState.atkColor)?.name} {t('duelRoll')}
             </button>
@@ -281,6 +290,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
             <button
               className="btn btn-secondary"
               onClick={() => handleDuelRoll('def')}
+              disabled={!isMyTurn}
             >
               🎲 {state.players.find(p => p.color === state.duelState.defColor)?.name} {t('duelRoll')}
             </button>
@@ -297,6 +307,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           trigger={state.specialTrigger}
           players={state.players}
           t={t}
+          isMyTurn={isMyTurn}
           onMost={cross => resolveMost(cross, state.specialTrigger)}
           onKocka={(d1, d2) => resolveKocka(state.specialTrigger, d1, d2)}
           onZamjena={(tc, tf) => resolveZamjena(state.specialTrigger, tc, tf)}
@@ -310,8 +321,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           state={state}
           players={state.players}
           onRoll={isMyTurn ? initialRoll : null}
-          onContinue={continueAfterTie}
-          onStart={startGame}
+          onContinue={isMyTurn ? continueAfterTie : null}
+          onStart={isMyTurn ? startGame : null}
           t={t}
         />
       )}
@@ -338,7 +349,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   );
 }
 
-function KockaModal({ t, onKocka }) {
+function KockaModal({ t, onKocka, isMyTurn = true }) {
   const [rolled, setRolled] = useState(null);
 
   function handleRoll() {
@@ -360,7 +371,7 @@ function KockaModal({ t, onKocka }) {
           <span style={{ color: 'var(--accent)' }}>{rolled.d1 + rolled.d2}</span>
         </div>
       ) : (
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleRoll}>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleRoll} disabled={!isMyTurn}>
           🎲🎲 {t('gameRoll')}
         </button>
       )}
@@ -368,7 +379,7 @@ function KockaModal({ t, onKocka }) {
   );
 }
 
-function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismiss }) {
+function SpecialModal({ trigger, players, t, isMyTurn = true, onMost, onKocka, onZamjena, onDismiss }) {
   const COLOR_HEX = {
     red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
     cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
@@ -378,7 +389,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`⏸️ ${t('specialStop')}`}>
         <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialStopMsg')}</p>
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss} disabled={!isMyTurn}>{t('ok')}</button>
       </Modal>
     );
   }
@@ -387,7 +398,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`⏪ ${t('specialRewind')}`}>
         <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialRewindMsg')}</p>
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss} disabled={!isMyTurn}>{t('ok')}</button>
       </Modal>
     );
   }
@@ -396,7 +407,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`💣 ${t('specialBomba')}`}>
         <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('specialBombaMsg')}</p>
-        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss}>{t('ok')}</button>
+        <button className="btn btn-primary" style={{ width: '100%' }} onClick={onDismiss} disabled={!isMyTurn}>{t('ok')}</button>
       </Modal>
     );
   }
@@ -405,14 +416,14 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
     return (
       <Modal title={`🌉 ${t('specialMost')}`}>
         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('specialMostQ')}</p>
-        <button className="btn btn-secondary" onClick={() => onMost(false)}>{t('specialMostStay')}</button>
-        <button className="btn btn-primary" onClick={() => onMost(true)}>{t('specialMostCross')}</button>
+        <button className="btn btn-secondary" onClick={() => onMost(false)} disabled={!isMyTurn}>{t('specialMostStay')}</button>
+        <button className="btn btn-primary" onClick={() => onMost(true)} disabled={!isMyTurn}>{t('specialMostCross')}</button>
       </Modal>
     );
   }
 
   if (trigger.type === 'kocka') {
-    return <KockaModal key={`${trigger.ring}-${trigger.idx}`} t={t} onKocka={onKocka} />;
+    return <KockaModal key={`${trigger.ring}-${trigger.idx}`} t={t} onKocka={onKocka} isMyTurn={isMyTurn} />;
   }
 
   if (trigger.type === 'zamjena') {
@@ -440,6 +451,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
               className="btn btn-secondary"
               style={{ borderLeft: `4px solid ${COLOR_HEX[f.playerColor]}`, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '2px' }}
               onClick={() => onZamjena(f.playerColor, f.id)}
+              disabled={!isMyTurn}
             >
               <span style={{ fontWeight: 700 }}>{t('zamjenaFig')} {f.id + 1}</span>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
@@ -448,7 +460,7 @@ function SpecialModal({ trigger, players, t, onMost, onKocka, onZamjena, onDismi
             </button>
           );
         })}
-        <button className="btn btn-ghost" onClick={() => onZamjena(null, null)}>{t('zamjenaSkip')}</button>
+        <button className="btn btn-ghost" onClick={() => onZamjena(null, null)} disabled={!isMyTurn}>{t('zamjenaSkip')}</button>
       </Modal>
     );
   }
@@ -511,14 +523,14 @@ function InitialRollModal({ state, players, onRoll, onContinue, onStart, t }) {
           <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem', marginTop: '4px' }}>
             <span style={{ color: COLOR_HEX[initialRollWinner] }}>{winner.name}</span> {t('initialRollStarts')}
           </p>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={onStart}>
+          <button className="btn btn-primary" style={{ width: '100%' }} onClick={onStart} disabled={!onStart}>
             🎮 {t('setupStart')}
           </button>
         </>
       )}
 
       {initialRollTied && !winner && (
-        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onContinue}>
+        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onContinue} disabled={!onContinue}>
           🎲 {t('initialRollReroll')}
         </button>
       )}

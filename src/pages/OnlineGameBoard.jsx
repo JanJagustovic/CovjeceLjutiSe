@@ -45,9 +45,14 @@ function OnlineGameBoardInner({ room, roomId, myUid }) {
   const gameHook = useOnlineGame(setupPlayers, roomId);
 
   const myColor = room.players.find(p => p.uid === myUid)?.color;
-  const isMyTurn = gameHook.state.phase === 'initial-roll'
-    ? myColor === gameHook.state.initialRollOrder[gameHook.state.initialRollIdx]
-    : room.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
+  const isMyTurn = (() => {
+    if (gameHook.state.phase === 'initial-roll') {
+      const { initialRollWinner, initialRollIdx, initialRollOrder } = gameHook.state;
+      if (initialRollWinner) return myColor === initialRollWinner;
+      return myColor === initialRollOrder[initialRollIdx];
+    }
+    return room.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
+  })();
 
   return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} />;
 }

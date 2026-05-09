@@ -11,7 +11,54 @@
 .panel-current {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-sm);
+  width: 100%;
+  position: relative;
+}
+
+.panel-place-actions {
+  position: absolute;
+  right: 0;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.panel-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+}
+
+.panel-action-btn--confirm {
+  border-color: #43a047;
+  color: #43a047;
+  background: transparent;
+}
+
+.panel-action-btn--confirm:hover {
+  background: #43a047;
+  color: #fff;
+}
+
+.panel-action-btn--skip {
+  border-color: var(--text-secondary);
+  color: var(--text-secondary);
+  background: transparent;
+}
+
+.panel-action-btn--skip:hover {
+  border-color: #ef4444;
+  color: #ef4444;
 }
 
 .panel-avatar {
@@ -97,19 +144,6 @@
   color: #fff;
 }
 
-.special-chip--skip {
-  cursor: pointer;
-  border-color: var(--text-secondary);
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  opacity: 0.7;
-}
-
-.special-chip--skip:hover {
-  opacity: 1;
-  border-color: var(--text-primary);
-  color: var(--text-primary);
-}
 
 .panel-players-strip {
   display: flex;

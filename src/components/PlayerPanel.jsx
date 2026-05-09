@@ -19,6 +19,7 @@ export default function PlayerPanel({
   mostCanPlace,
   spawnPointOnly,
   onSkipPlaceSpecial,
+  onConfirmPlaceSpecial,
   t,
 }) {
   const current = players[currentPlayerIndex];
@@ -51,6 +52,18 @@ export default function PlayerPanel({
             {diceValue && <span className="panel-dice"> · 🎲{diceValue}</span>}
           </span>
         </div>
+        {phase === 'placing-special' && (
+          <div className="panel-place-actions">
+            {selectedSpecial && (
+              <button className="panel-action-btn panel-action-btn--confirm" onClick={onConfirmPlaceSpecial}>
+                ✓
+              </button>
+            )}
+            <button className="panel-action-btn panel-action-btn--skip" onClick={onSkipPlaceSpecial}>
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Specials in hand — always rendered to keep panel height constant */}
@@ -71,14 +84,6 @@ export default function PlayerPanel({
             </button>
           );
         })}
-        {phase === 'placing-special' && (
-          <button
-            className="special-chip special-chip--skip"
-            onClick={onSkipPlaceSpecial}
-          >
-            ✕
-          </button>
-        )}
       </div>
 
       {/* All players strip */}
