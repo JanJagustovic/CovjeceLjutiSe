@@ -82,8 +82,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     : [];
 
   const validTargets = isMoving
-    ? validMoves.map(m => {
-        if (m.type === 'move' || m.type === 'exit' || m.type === 'pickup') return { ring: m.ring, idx: m.idx };
+    ? validMoves.filter(m => m.type !== 'pickup' && m.type !== 'pickup-bridge').map(m => {
+        if (m.type === 'move' || m.type === 'exit') return { ring: m.ring, idx: m.idx };
         if (m.type === 'finish') return { lane: m.lane, color: m.color, slot: m.slot };
         return null;
       }).filter(Boolean)
@@ -97,7 +97,10 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     if (playerColor !== currentPlayer.color) return;
     const figureMoves = validMoves.filter(m => m.figId === figId);
     if (figureMoves.length === 0) return;
-    const move = figureMoves[0];
+    // Pickup-only figures are handled by the pickup button, not by clicking
+    const nonPickupMoves = figureMoves.filter(m => m.type !== 'pickup' && m.type !== 'pickup-bridge');
+    if (nonPickupMoves.length === 0) return;
+    const move = nonPickupMoves[0];
     if (move.type === 'exit') {
       const exitMoves = figureMoves.filter(m => m.type === 'exit');
       if (exitMoves.length > 1) {
@@ -114,6 +117,24 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   }
 
   const [exitChoiceFig, setExitChoiceFig] = useState(null);
+  const [pickupChoiceMoves, setPickupChoiceMoves] = useState(null);
+
+  const pickupMoves = isMoving ? validMoves.filter(m => m.type === 'pickup' || m.type === 'pickup-bridge') : [];
+  const hasPickup = pickupMoves.length > 0;
+
+  function handlePickupBtn() {
+    if (!isMyTurn || !hasPickup) return;
+    // Group by figId — take the first figure that has pickup moves
+    const figIds = [...new Set(pickupMoves.map(m => m.figId))];
+    const moves = pickupMoves.filter(m => m.figId === figIds[0]);
+    const hasSpecial = moves.some(m => m.type === 'pickup');
+    const hasBridge  = moves.some(m => m.type === 'pickup-bridge');
+    if (hasSpecial && hasBridge) {
+      setPickupChoiceMoves(moves);
+    } else {
+      selectMove(moves[0]);
+    }
+  }
 
   function handleCellClick({ cell }) {
     if (!isMyTurn) return;
@@ -131,17 +152,6 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
       }
     }
 
-    // Tap to place special — only allowed on the exact cell just landed on
-    if (isPlacing && selectedSpecialType) {
-      const { lastMoveRing, lastMoveIdx } = state;
-      if (cell.type === 'outer-path' && lastMoveRing === 'outer' && cell.outerIdx === lastMoveIdx) {
-        placeSpecial('outer', lastMoveIdx, selectedSpecialType);
-        setSelectedSpecialType(null);
-      } else if (cell.type === 'inner-path' && lastMoveRing === 'inner' && cell.innerIdx === lastMoveIdx) {
-        placeSpecial('inner', lastMoveIdx, selectedSpecialType);
-        setSelectedSpecialType(null);
-      }
-    }
   }
 
   function handleDuelRoll(who) {
@@ -230,6 +240,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           selectedSpecial={selectedSpecialType}
           mostCanPlace={mostCanPlace}
           spawnPointOnly={isSpawnPointLanding}
+          hasPickup={hasPickup}
+          onPickup={handlePickupBtn}
           onSkipPlaceSpecial={() => { if (!isMyTurn) return; setSelectedSpecialType(null); skipPlaceSpecial(); }}
           onConfirmPlaceSpecial={() => {
             if (!isMyTurn || !selectedSpecialType || !state.lastMoveRing) return;
@@ -264,6 +276,28 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
               {m.ring === 'outer' ? t('gameOuterRing') : t('gameInnerRing')}
             </button>
           ))}
+        </Modal>
+      )}
+
+      {/* Pickup choice modal */}
+      {pickupChoiceMoves && (
+        <Modal title={t('pickupChoiceTitle')} onClose={() => setPickupChoiceMoves(null)}>
+          {pickupChoiceMoves.map(m => {
+            const spKey = `${m.ring}-${m.idx}`;
+            const specialType = m.type === 'pickup' ? state.specialsOnBoard[spKey]?.type : null;
+            const SPECIAL_ICONS = { most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '⏸️', zamjena: '🔄' };
+            return (
+              <button
+                key={m.type}
+                className="btn btn-secondary"
+                onClick={() => { selectMove(m); setPickupChoiceMoves(null); }}
+              >
+                {m.type === 'pickup-bridge'
+                  ? `🌉 ${t('pickupBridge')}`
+                  : `${SPECIAL_ICONS[specialType] ?? '⭐'} ${t('pickupSpecial')}`}
+              </button>
+            );
+          })}
         </Modal>
       )}
 

@@ -73,6 +73,10 @@ const en = {
   mostCannotPlace:  'BRIDGE not possible — no free parallel square',
   mostCannotField:  'BRIDGE not possible on this square',
 
+  pickupChoiceTitle:  'Pick up which field?',
+  pickupSpecial:      'Special field',
+  pickupBridge:       'Bridge',
+
   // Dice duel
   duelTitle:  'Duel for the square!',
   duelWinner: 'stays on the square',

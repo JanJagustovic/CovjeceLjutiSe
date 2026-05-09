@@ -73,6 +73,10 @@ const hr = {
   mostCannotPlace:  'MOST nije moguć — nema slobodnog paralelnog polja',
   mostCannotField:  'MOST nije moguć na ovom polju',
 
+  pickupChoiceTitle:  'Koje polje pokupiti?',
+  pickupSpecial:      'Specijalno polje',
+  pickupBridge:       'Most',
+
   // Dice duel
   duelTitle:   'Dvoboj za polje!',
   duelWinner:  'ostaje na polju',

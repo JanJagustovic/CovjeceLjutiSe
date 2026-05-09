@@ -20,6 +20,8 @@ export default function PlayerPanel({
   spawnPointOnly,
   onSkipPlaceSpecial,
   onConfirmPlaceSpecial,
+  hasPickup,
+  onPickup,
   t,
 }) {
   const current = players[currentPlayerIndex];
@@ -52,16 +54,23 @@ export default function PlayerPanel({
             {diceValue && <span className="panel-dice"> · 🎲{diceValue}</span>}
           </span>
         </div>
-        {phase === 'placing-special' && (
+        {(phase === 'placing-special' || (phase === 'moving' && hasPickup)) && (
           <div className="panel-place-actions">
-            {selectedSpecial && (
+            {phase === 'moving' && hasPickup && (
+              <button className="panel-action-btn panel-action-btn--pickup" onClick={onPickup} title="Pick up field">
+                ⬆
+              </button>
+            )}
+            {phase === 'placing-special' && selectedSpecial && (
               <button className="panel-action-btn panel-action-btn--confirm" onClick={onConfirmPlaceSpecial}>
                 ✓
               </button>
             )}
-            <button className="panel-action-btn panel-action-btn--skip" onClick={onSkipPlaceSpecial}>
-              ✕
-            </button>
+            {phase === 'placing-special' && (
+              <button className="panel-action-btn panel-action-btn--skip" onClick={onSkipPlaceSpecial}>
+                ✕
+              </button>
+            )}
           </div>
         )}
       </div>

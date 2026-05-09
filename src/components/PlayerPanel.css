@@ -50,6 +50,17 @@
   color: #fff;
 }
 
+.panel-action-btn--pickup {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: transparent;
+}
+
+.panel-action-btn--pickup:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
 .panel-action-btn--skip {
   border-color: var(--text-secondary);
   color: var(--text-secondary);

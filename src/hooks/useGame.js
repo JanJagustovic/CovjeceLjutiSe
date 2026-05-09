@@ -120,11 +120,14 @@ export function getValidMoves(state, diceVal) {
   const moves = [];
 
   player.figures.forEach(fig => {
-    // Pickup: dice = 6, figure standing on a special square (stop restriction doesn't block this)
+    // Pickup: dice = 6, figure standing on a special or bridge square (stop restriction doesn't block this)
     if (diceVal === 6 && typeof fig.pos === 'object' && fig.pos.ring) {
       const spKey = `${fig.pos.ring}-${fig.pos.idx}`;
       if (state.specialsOnBoard[spKey]) {
         moves.push({ figId: fig.id, type: 'pickup', ring: fig.pos.ring, idx: fig.pos.idx });
+      }
+      if (state.bridgesOnBoard[spKey]) {
+        moves.push({ figId: fig.id, type: 'pickup-bridge', ring: fig.pos.ring, idx: fig.pos.idx });
       }
     }
 
@@ -261,6 +264,32 @@ function applyMove(state, move) {
       armed.bombActive = null;
     });
     return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'rolling', diceValue: null, bonusRoll: false, rollsLeft: 1 };
+  }
+
+  if (move.type === 'pickup-bridge') {
+    const spKey = `${move.ring}-${move.idx}`;
+    if (!state.bridgesOnBoard[spKey]) return state;
+    let newPlayers = deepCopyPlayers(state.players);
+    let newSpecials = { ...state.specialsOnBoard };
+    const mover = newPlayers.find(p => p.color === player.color);
+    const fig = mover.figures.find(f => f.id === move.figId);
+    fig.stopActive = false;
+    fig.rewindNext = false;
+    fig.bombActive = null;
+    mover.specialsHeld = [...mover.specialsHeld, 'most'];
+    const newBridges = { ...state.bridgesOnBoard };
+    delete newBridges[spKey];
+    mover.figures.filter(f => f.id !== move.figId && f.bombActive).forEach(armed => {
+      if (typeof armed.pos === 'object' && armed.pos.ring) {
+        delete newSpecials[`${armed.pos.ring}-${armed.pos.idx}`];
+      }
+      mover.specialsHeld = [...mover.specialsHeld, 'bomba'];
+      armed.pos = 'home';
+      armed.stopActive = false;
+      armed.rewindNext = false;
+      armed.bombActive = null;
+    });
+    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, bridgesOnBoard: newBridges, phase: 'rolling', diceValue: null, bonusRoll: false, rollsLeft: 1 };
   }
 
   let newPlayers = deepCopyPlayers(state.players);
