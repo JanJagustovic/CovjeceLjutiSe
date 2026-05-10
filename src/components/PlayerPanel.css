@@ -9,8 +9,8 @@
 }
 
 @media (max-width: 480px) {
-  .player-panel {
-    padding: 20px var(--sp-md);
+  .panel-current-mirror {
+    display: none;
   }
 }
 
@@ -103,12 +103,17 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .panel-name {
   font-size: 0.85rem;
   font-weight: 700;
   color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .panel-status {

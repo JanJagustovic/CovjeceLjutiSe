@@ -22,7 +22,7 @@ function loadSetup() {
   } catch { return null; }
 }
 
-export default function GameBoard({ gameHook = null, isMyTurn = true }) {
+export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerColor = null }) {
   const navigate = useNavigate();
   const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
@@ -34,14 +34,13 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
   const localHook = useGame(setup?.players || []);
   const { state, currentPlayer, validMoves, rollDice, selectMove,
-    skipPlaceSpecial, placeSpecial, resolveDuel, resolveMost, resolveKocka, resolveZamjena,
+    skipPlaceSpecial, placeSpecial, resolveDuel, duelSetRoll, resolveMost, resolveKocka, kockaSetRoll, resolveZamjena,
     dismissSpecialInfo, endTurn, initialRoll, continueAfterTie, startGame,
   } = gameHook ?? localHook;
 
   const { containerRef: boardAreaRef, transform: boardTransform } = usePinchZoom();
 
   const [selectedSpecialType, setSelectedSpecialType] = useState(null);
-  const [duelRolls, setDuelRolls] = useState({ atk: null, def: null });
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [inStuckRolls, setInStuckRolls] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30);
@@ -85,17 +84,33 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     if (!isMyTurn) return;
     if (phase === 'placing-special') skipPlaceSpecial();
     else if (phase === 'rolling' || phase === 'moving') endTurn();
-    else if (phase === 'special-trigger') dismissSpecialInfo();
+    else if (phase === 'special-trigger') {
+      const tr = state.specialTrigger;
+      if (tr?.type === 'kocka' && tr.d1 == null) {
+        kockaSetRoll(Math.floor(Math.random() * 6) + 1, Math.floor(Math.random() * 6) + 1);
+      } else if (tr?.type === 'zamjena') {
+        if (zamjenaEligibleFigs.length > 0) {
+          const pick = zamjenaEligibleFigs[Math.floor(Math.random() * zamjenaEligibleFigs.length)];
+          resolveZamjena(tr, pick.playerColor, pick.figId);
+        } else {
+          resolveZamjena(tr, null, null);
+        }
+      } else if (tr?.type !== 'kocka') {
+        dismissSpecialInfo();
+      }
+    }
     else if (phase === 'duel') {
-      const a = Math.floor(Math.random() * 6) + 1;
-      const d = Math.floor(Math.random() * 6) + 1;
-      resolveDuel(a, d);
-      setDuelRolls({ atk: null, def: null });
+      const ds = state.duelState;
+      if (!ds) return;
+      const canRollAtk = (!myPlayerColor || myPlayerColor === ds.atkColor) && ds.atkRoll === null;
+      const canRollDef = (!myPlayerColor || myPlayerColor === ds.defColor) && ds.defRoll === null;
+      if (canRollAtk) duelSetRoll('atk', Math.floor(Math.random() * 6) + 1);
+      else if (canRollDef) duelSetRoll('def', Math.floor(Math.random() * 6) + 1);
     }
   };
 
   // Reset and start 30s countdown whenever a meaningful state change occurs
-  const stateKey = `${state.currentPlayerIndex}-${phase}-${state.diceValue}-${state.rollsLeft}`;
+  const stateKey = `${state.currentPlayerIndex}-${phase}-${state.diceValue}-${state.rollsLeft}-${state.duelState?.atkRoll ?? ''}-${state.duelState?.defRoll ?? ''}-${state.specialTrigger?.d1 ?? ''}`;
   useEffect(() => {
     if (isOver || isInitialRoll) return;
     setTimeLeft(30);
@@ -115,9 +130,33 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     return () => clearTimeout(timer);
   }, [isNoMoves, endTurn]);
 
+  // Show both duel rolls for 1.5s before resolving — only the attacker (isMyTurn) dispatches
+  const ds = state.duelState;
+  useEffect(() => {
+    if (!ds || ds.atkRoll === null || ds.defRoll === null || !isMyTurn) return;
+    const id = setTimeout(() => resolveDuel(ds.atkRoll, ds.defRoll), 1500);
+    return () => clearTimeout(id);
+  }, [ds?.atkRoll, ds?.defRoll, isMyTurn]);
+
+  const isZamjena = isSpecial && state.specialTrigger?.type === 'zamjena';
+  const zamjenaPlacer = isZamjena
+    ? state.players.find(p => p.color === state.specialTrigger.placedBy && p.color !== state.specialTrigger.playerColor)
+    : null;
+  const zamjenaEligibleFigs = zamjenaPlacer
+    ? zamjenaPlacer.figures
+        .filter(f => typeof f.pos === 'object' && f.pos.ring)
+        .map(f => {
+          const path = f.pos.ring === 'outer' ? OUTER_PATH : INNER_PATH;
+          const cell = path[f.pos.idx];
+          return { figId: f.id, playerColor: zamjenaPlacer.color, row: cell.r + 1, col: cell.c + 1 };
+        })
+    : [];
+
   const moveableFigures = isMoving
     ? validMoves.map(m => ({ figId: m.figId, playerColor: currentPlayer.color }))
-    : [];
+    : isZamjena
+      ? zamjenaEligibleFigs
+      : [];
 
   const validTargets = isMoving
     ? validMoves.filter(m => m.type !== 'pickup' && m.type !== 'pickup-bridge').map(m => {
@@ -131,6 +170,12 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
   function handleFigureClick(playerColor, figId) {
     if (!isMyTurn) return;
+    if (isZamjena) {
+      if (zamjenaEligibleFigs.some(f => f.figId === figId && f.playerColor === playerColor)) {
+        resolveZamjena(state.specialTrigger, playerColor, figId);
+      }
+      return;
+    }
     if (!isMoving) return;
     if (playerColor !== currentPlayer.color) return;
     const figureMoves = validMoves.filter(m => m.figId === figId);
@@ -162,15 +207,10 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
   function handlePickupBtn() {
     if (!isMyTurn || !hasPickup) return;
-    // Group by figId — take the first figure that has pickup moves
-    const figIds = [...new Set(pickupMoves.map(m => m.figId))];
-    const moves = pickupMoves.filter(m => m.figId === figIds[0]);
-    const hasSpecial = moves.some(m => m.type === 'pickup');
-    const hasBridge  = moves.some(m => m.type === 'pickup-bridge');
-    if (hasSpecial && hasBridge) {
-      setPickupChoiceMoves(moves);
+    if (pickupMoves.length === 1) {
+      selectMove(pickupMoves[0]);
     } else {
-      selectMove(moves[0]);
+      setPickupChoiceMoves(pickupMoves);
     }
   }
 
@@ -193,19 +233,13 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   }
 
   function handleDuelRoll(who) {
-    if (!isMyTurn) return;
-    const val = Math.floor(Math.random() * 6) + 1;
-    const newRolls = who === 'atk'
-      ? { ...duelRolls, atk: val }
-      : { ...duelRolls, def: val };
-    setDuelRolls(newRolls);
-
-    if (newRolls.atk !== null && newRolls.def !== null) {
-      setTimeout(() => {
-        resolveDuel(newRolls.atk, newRolls.def);
-        setDuelRolls({ atk: null, def: null });
-      }, 1500);
-    }
+    const ds = state.duelState;
+    if (!ds) return;
+    if (who === 'atk' && myPlayerColor && myPlayerColor !== ds.atkColor) return;
+    if (who === 'def' && myPlayerColor && myPlayerColor !== ds.defColor) return;
+    if (who === 'atk' && ds.atkRoll !== null) return;
+    if (who === 'def' && ds.defRoll !== null) return;
+    duelSetRoll(who, Math.floor(Math.random() * 6) + 1);
   }
 
   if (!gameHook && !setup) return null;
@@ -274,6 +308,18 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
       {/* Bottom panel */}
       <div className="game-bottom">
+        {isZamjena && (
+          <ZamjenaStrip
+            trigger={state.specialTrigger}
+            placer={zamjenaPlacer}
+            eligibleFigs={zamjenaEligibleFigs}
+            players={state.players}
+            isMyTurn={isMyTurn}
+            onSelect={(targetColor, targetFigId) => resolveZamjena(state.specialTrigger, targetColor, targetFigId)}
+            onSkip={() => resolveZamjena(state.specialTrigger, null, null)}
+            t={t}
+          />
+        )}
         <PlayerPanel
           players={state.players}
           currentPlayerIndex={state.currentPlayerIndex}
@@ -328,71 +374,80 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
       )}
 
       {/* Pickup choice modal */}
-      {pickupChoiceMoves && (
-        <Modal title={t('pickupChoiceTitle')} onClose={() => setPickupChoiceMoves(null)}>
-          {pickupChoiceMoves.map(m => {
-            const spKey = `${m.ring}-${m.idx}`;
-            const specialType = m.type === 'pickup' ? state.specialsOnBoard[spKey]?.type : null;
-            const SPECIAL_ICONS = { most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '⏸️', zamjena: '🔄' };
-            return (
-              <button
-                key={m.type}
-                className="btn btn-secondary"
-                onClick={() => { selectMove(m); setPickupChoiceMoves(null); }}
-              >
-                {m.type === 'pickup-bridge'
-                  ? `🌉 ${t('pickupBridge')}`
-                  : `${SPECIAL_ICONS[specialType] ?? '⭐'} ${t('pickupSpecial')}`}
-              </button>
-            );
-          })}
-        </Modal>
-      )}
+      {pickupChoiceMoves && (() => {
+        const SPECIAL_ICONS = { most: '🌉', kocka: '🎲', rewind: '⏪', bomba: '💣', stop: '⏸️', zamjena: '🔄' };
+        const multiFig = new Set(pickupChoiceMoves.map(m => m.figId)).size > 1;
+        return (
+          <Modal title={t('pickupChoiceTitle')} onClose={() => setPickupChoiceMoves(null)}>
+            {pickupChoiceMoves.map(m => {
+              const spKey = `${m.ring}-${m.idx}`;
+              const specialType = m.type === 'pickup' ? state.specialsOnBoard[spKey]?.type : null;
+              const fieldLabel = m.type === 'pickup-bridge'
+                ? `🌉 ${t('pickupBridge')}`
+                : `${SPECIAL_ICONS[specialType] ?? '⭐'} ${t('pickupSpecial')}`;
+              return (
+                <button
+                  key={`${m.figId}-${m.type}`}
+                  className="btn btn-secondary"
+                  onClick={() => { selectMove(m); setPickupChoiceMoves(null); }}
+                >
+                  {multiFig ? `${t('zamjenaFig')} ${m.figId + 1} — ${fieldLabel}` : fieldLabel}
+                </button>
+              );
+            })}
+          </Modal>
+        );
+      })()}
 
       {/* Duel modal */}
-      {isDuel && state.duelState && (
-        <Modal title={t('duelTitle')}>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-            <span style={{ color: COLOR_HEX[state.duelState.atkColor] }}>●</span> {t('duelVs')}{' '}
-            <span style={{ color: COLOR_HEX[state.duelState.defColor] }}>●</span>
-          </p>
-          {duelRolls.atk === null && (
-            <button
-              className="btn btn-primary"
-              onClick={() => handleDuelRoll('atk')}
-              disabled={!isMyTurn}
-            >
-              🎲 {state.players.find(p => p.color === state.duelState.atkColor)?.name} {t('duelRoll')}
-            </button>
-          )}
-          {duelRolls.atk !== null && (
-            <p>{t('duelAttacker')}: <strong>{duelRolls.atk}</strong></p>
-          )}
-          {duelRolls.atk !== null && duelRolls.def === null && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => handleDuelRoll('def')}
-              disabled={!isMyTurn}
-            >
-              🎲 {state.players.find(p => p.color === state.duelState.defColor)?.name} {t('duelRoll')}
-            </button>
-          )}
-          {duelRolls.def !== null && (
-            <p>{t('duelDefender')}: <strong>{duelRolls.def}</strong></p>
-          )}
-        </Modal>
-      )}
+      {isDuel && state.duelState && (() => {
+        const ds = state.duelState;
+        const atkName = state.players.find(p => p.color === ds.atkColor)?.name;
+        const defName = state.players.find(p => p.color === ds.defColor)?.name;
+        const canRollAtk = !myPlayerColor || myPlayerColor === ds.atkColor;
+        const canRollDef = !myPlayerColor || myPlayerColor === ds.defColor;
+        return (
+          <Modal title={t('duelTitle')}>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+              <span style={{ color: COLOR_HEX[ds.atkColor] }}>●</span> {t('duelVs')}{' '}
+              <span style={{ color: COLOR_HEX[ds.defColor] }}>●</span>
+            </p>
+            {ds.atkRoll === null && canRollAtk && (
+              <button className="btn btn-primary" onClick={() => handleDuelRoll('atk')}>
+                🎲 {atkName} {t('duelRoll')}
+              </button>
+            )}
+            {ds.atkRoll === null && !canRollAtk && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>⏳ {atkName} {t('duelRoll')}…</p>
+            )}
+            {ds.atkRoll !== null && (
+              <p>{t('duelAttacker')}: <strong>{ds.atkRoll}</strong></p>
+            )}
+            {ds.atkRoll !== null && ds.defRoll === null && canRollDef && (
+              <button className="btn btn-secondary" onClick={() => handleDuelRoll('def')}>
+                🎲 {defName} {t('duelRoll')}
+              </button>
+            )}
+            {ds.atkRoll !== null && ds.defRoll === null && !canRollDef && (
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>⏳ {defName} {t('duelRoll')}…</p>
+            )}
+            {ds.defRoll !== null && (
+              <p>{t('duelDefender')}: <strong>{ds.defRoll}</strong></p>
+            )}
+          </Modal>
+        );
+      })()}
 
-      {/* Special trigger modal */}
-      {isSpecial && state.specialTrigger && (
+      {/* Special trigger modal — zamjena handled by the board strip below */}
+      {isSpecial && state.specialTrigger && state.specialTrigger.type !== 'zamjena' && (
         <SpecialModal
           trigger={state.specialTrigger}
           players={state.players}
           t={t}
           isMyTurn={isMyTurn}
           onMost={cross => resolveMost(cross, state.specialTrigger)}
+          onKockaSetRoll={(d1, d2) => kockaSetRoll(d1, d2)}
           onKocka={(d1, d2) => resolveKocka(state.specialTrigger, d1, d2)}
-          onZamjena={(tc, tf) => resolveZamjena(state.specialTrigger, tc, tf)}
           onDismiss={dismissSpecialInfo}
         />
       )}
@@ -440,14 +495,66 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   );
 }
 
-function KockaModal({ t, onKocka, isMyTurn = true }) {
-  const [rolled, setRolled] = useState(null);
+const ZAMJENA_COLOR_HEX = {
+  red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
+  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
+};
+
+function ZamjenaStrip({ trigger, placer, eligibleFigs, players, isMyTurn, onSelect, onSkip, t }) {
+  const currentPlayer = players.find(p => p.color === trigger.playerColor);
+  return (
+    <div className="zamjena-strip">
+      <div className="zamjena-strip-info">
+        <span className="zamjena-strip-icon">🔄</span>
+        <span className="zamjena-strip-label">{t('specialZamjena')}</span>
+        {currentPlayer && !isMyTurn && (
+          <span className="zamjena-strip-waiting">({currentPlayer.name})</span>
+        )}
+      </div>
+      <div className="zamjena-strip-figs">
+        {eligibleFigs.length === 0 && (
+          <span className="zamjena-strip-empty">{t('zamjenaNoFigs')}</span>
+        )}
+        {eligibleFigs.map(f => (
+          <button
+            key={f.figId}
+            className="zamjena-fig-btn"
+            style={{ background: ZAMJENA_COLOR_HEX[f.playerColor] }}
+            onClick={() => isMyTurn && onSelect(f.playerColor, f.figId)}
+            disabled={!isMyTurn}
+          >
+            <span className="zamjena-fig-num">{f.figId + 1}</span>
+            <span className="zamjena-fig-coord">{f.row},{f.col}</span>
+          </button>
+        ))}
+      </div>
+      {eligibleFigs.length === 0 && (
+        <button
+          className="btn btn-ghost zamjena-skip-btn"
+          onClick={() => isMyTurn && onSkip()}
+          disabled={!isMyTurn}
+        >✕</button>
+      )}
+    </div>
+  );
+}
+
+function KockaModal({ t, trigger, onKockaSetRoll, onKocka, isMyTurn = true }) {
+  const rolled = trigger.d1 != null;
+
+  // Once rolls are set in state (visible to all), active player resolves after a short delay
+  useEffect(() => {
+    if (!rolled || !isMyTurn) return;
+    const id = setTimeout(() => onKocka(trigger.d1, trigger.d2), 1500);
+    return () => clearTimeout(id);
+  }, [rolled, isMyTurn]);
 
   function handleRoll() {
-    const d1 = Math.floor(Math.random() * 6) + 1;
-    const d2 = Math.floor(Math.random() * 6) + 1;
-    setRolled({ d1, d2 });
-    setTimeout(() => onKocka(d1, d2), 1500);
+    if (!isMyTurn || rolled) return;
+    onKockaSetRoll(
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+    );
   }
 
   return (
@@ -455,11 +562,11 @@ function KockaModal({ t, onKocka, isMyTurn = true }) {
       <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('specialKockaMsg')}</p>
       {rolled ? (
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center', fontSize: '1.4rem', fontWeight: 900, margin: '8px 0' }}>
-          <span>🎲 {rolled.d1}</span>
+          <span>🎲 {trigger.d1}</span>
           <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>+</span>
-          <span>🎲 {rolled.d2}</span>
+          <span>🎲 {trigger.d2}</span>
           <span style={{ fontSize: '1rem', color: 'var(--text-secondary)' }}>=</span>
-          <span style={{ color: 'var(--accent)' }}>{rolled.d1 + rolled.d2}</span>
+          <span style={{ color: 'var(--accent)' }}>{trigger.d1 + trigger.d2}</span>
         </div>
       ) : (
         <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleRoll} disabled={!isMyTurn}>
@@ -470,7 +577,7 @@ function KockaModal({ t, onKocka, isMyTurn = true }) {
   );
 }
 
-function SpecialModal({ trigger, players, t, isMyTurn = true, onMost, onKocka, onZamjena, onDismiss }) {
+function SpecialModal({ trigger, players, t, isMyTurn = true, onMost, onKockaSetRoll, onKocka, onDismiss }) {
   const COLOR_HEX = {
     red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
     cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
@@ -514,46 +621,7 @@ function SpecialModal({ trigger, players, t, isMyTurn = true, onMost, onKocka, o
   }
 
   if (trigger.type === 'kocka') {
-    return <KockaModal key={`${trigger.ring}-${trigger.idx}`} t={t} onKocka={onKocka} isMyTurn={isMyTurn} />;
-  }
-
-  if (trigger.type === 'zamjena') {
-    const eligibleFigs = [];
-    const placer = players.find(p => p.color === trigger.placedBy);
-    if (placer) {
-      placer.figures.forEach(f => {
-        if (typeof f.pos === 'object' && f.pos.ring) {
-          eligibleFigs.push({ ...f, playerColor: placer.color });
-        }
-      });
-    }
-    return (
-      <Modal title={`🔄 ${t('specialZamjena')}`}>
-        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{t('specialZamjenaTitle')}</p>
-        {eligibleFigs.length === 0 && (
-          <p style={{ color: 'var(--text-muted)' }}>{t('zamjenaNoFigs')}</p>
-        )}
-        {eligibleFigs.map(f => {
-          const path = f.pos.ring === 'outer' ? OUTER_PATH : INNER_PATH;
-          const { r, c } = path[f.pos.idx];
-          return (
-            <button
-              key={f.id}
-              className="btn btn-secondary"
-              style={{ borderLeft: `4px solid ${COLOR_HEX[f.playerColor]}`, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '2px' }}
-              onClick={() => onZamjena(f.playerColor, f.id)}
-              disabled={!isMyTurn}
-            >
-              <span style={{ fontWeight: 700 }}>{t('zamjenaFig')} {f.id + 1}</span>
-              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 400 }}>
-                ({r}, {c})
-              </span>
-            </button>
-          );
-        })}
-        <button className="btn btn-ghost" onClick={() => onZamjena(null, null)} disabled={!isMyTurn}>{t('zamjenaSkip')}</button>
-      </Modal>
-    );
+    return <KockaModal key={`${trigger.ring}-${trigger.idx}`} t={t} trigger={trigger} onKockaSetRoll={onKockaSetRoll} onKocka={onKocka} isMyTurn={isMyTurn} />;
   }
 
   return null;

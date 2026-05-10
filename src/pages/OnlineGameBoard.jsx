@@ -54,5 +54,5 @@ function OnlineGameBoardInner({ room, roomId, myUid }) {
     return room.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
   })();
 
-  return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} />;
+  return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} myPlayerColor={myColor} />;
 }

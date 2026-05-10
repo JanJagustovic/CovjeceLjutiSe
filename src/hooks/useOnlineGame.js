@@ -43,10 +43,14 @@ export function useOnlineGame(setupPlayers, roomId) {
     dispatch({ type: 'PLACE_SPECIAL', ring, idx, specialType }), []);
   const resolveDuel        = useCallback((atkRoll, defRoll) =>
     dispatch({ type: 'RESOLVE_DUEL', atkRoll, defRoll }), []);
+  const duelSetRoll        = useCallback((who, roll) =>
+    dispatch({ type: 'DUEL_SET_ROLL', who, roll }), []);
   const resolveMost        = useCallback((cross, trigger) =>
     dispatch({ type: 'RESOLVE_MOST', cross, trigger }), []);
   const resolveKocka       = useCallback((trigger, d1, d2) =>
     dispatch({ type: 'RESOLVE_KOCKA', trigger, d1, d2 }), []);
+  const kockaSetRoll       = useCallback((d1, d2) =>
+    dispatch({ type: 'KOCKA_SET_ROLL', d1, d2 }), []);
   const resolveZamjena     = useCallback((trigger, targetColor, targetFigId) =>
     dispatch({ type: 'RESOLVE_ZAMJENA', trigger, targetColor, targetFigId }), []);
   const dismissSpecialInfo = useCallback(() => dispatch({ type: 'DISMISS_SPECIAL_INFO' }), []);
@@ -61,7 +65,7 @@ export function useOnlineGame(setupPlayers, roomId) {
   return {
     state, currentPlayer, validMoves,
     rollDice, selectMove, skipPlaceSpecial, placeSpecial,
-    resolveDuel, resolveMost, resolveKocka, resolveZamjena,
+    resolveDuel, duelSetRoll, resolveMost, resolveKocka, kockaSetRoll, resolveZamjena,
     dismissSpecialInfo, endTurn, initialRoll, continueAfterTie, startGame,
   };
 }

@@ -453,13 +453,18 @@ function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
   }
   const spKey = `${ring}-${idx}`;
   if (state.specialsOnBoard[spKey]) {
+    const sp = state.specialsOnBoard[spKey];
+    // ZAMJENA placed by the same player who landed on it — skip (can't swap with yourself)
+    if (sp.type === 'zamjena' && sp.placedBy === playerColor) {
+      return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
+    }
     const trigger = {
-      type: state.specialsOnBoard[spKey].type,
+      type: sp.type,
       ring,
       idx,
       figId,
       playerColor,
-      placedBy: state.specialsOnBoard[spKey].placedBy,
+      placedBy: sp.placedBy,
     };
     return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
   }
@@ -528,6 +533,38 @@ function applySpecialTrigger(state, trigger) {
     phase: 'special-trigger',
     specialTrigger: trigger,
   };
+}
+
+function applyDuelResolve(state, atkRoll, defRoll) {
+  const { duelState } = state;
+  if (atkRoll === defRoll) {
+    return { ...state, duelState: { ...duelState, atkRoll: null, defRoll: null } };
+  }
+  let newPlayers = deepCopyPlayers(state.players);
+  const loserColor = atkRoll > defRoll ? duelState.defColor : duelState.atkColor;
+  const loserFigId = atkRoll > defRoll ? duelState.defFigId : duelState.figId;
+  const loserPlayer = newPlayers.find(p => p.color === loserColor);
+  const loserFig = loserPlayer.figures.find(f => f.id === loserFigId);
+  loserFig.pos = 'home';
+  loserFig.stopActive = false;
+  loserFig.rewindNext = false;
+  loserFig.bombActive = null;
+  const attackerWon = atkRoll > defRoll;
+  const newState = { ...state, players: newPlayers, duelState: null };
+  if (!attackerWon) return advanceTurn(newState);
+  const spKey = `${duelState.ring}-${duelState.idx}`;
+  if (newState.specialsOnBoard[spKey]) {
+    const trigger = {
+      type: newState.specialsOnBoard[spKey].type,
+      ring: duelState.ring,
+      idx: duelState.idx,
+      figId: duelState.figId,
+      playerColor: duelState.atkColor,
+      placedBy: newState.specialsOnBoard[spKey].placedBy,
+    };
+    return applySpecialTrigger(newState, trigger);
+  }
+  return afterMove(newState, { type: 'move', ring: duelState.ring, idx: duelState.idx });
 }
 
 function reducer(state, action) {
@@ -631,50 +668,14 @@ function reducer(state, action) {
 
     case 'RESOLVE_DUEL': {
       const { atkRoll, defRoll } = action;
-      const { duelState } = state;
-      if (!duelState) return state;
+      if (!state.duelState) return state;
+      return applyDuelResolve(state, atkRoll, defRoll);
+    }
 
-      if (atkRoll === defRoll) {
-        // Tie — need to re-roll
-        return { ...state, duelState: { ...duelState, atkRoll: null, defRoll: null } };
-      }
-
-      let newPlayers = deepCopyPlayers(state.players);
-      const loserColor = atkRoll > defRoll ? duelState.defColor : duelState.atkColor;
-      const loserFigId = atkRoll > defRoll ? duelState.defFigId : duelState.figId;
-
-      const loserPlayer = newPlayers.find(p => p.color === loserColor);
-      const loserFig = loserPlayer.figures.find(f => f.id === loserFigId);
-      loserFig.pos = 'home';
-      loserFig.stopActive = false;
-      loserFig.rewindNext = false;
-      loserFig.bombActive = null;
-
-      const attackerWon = atkRoll > defRoll;
-      const newState = { ...state, players: newPlayers, duelState: null };
-
-      if (!attackerWon) {
-        // Attacker lost — figure went home, no placement, no bonus roll
-        return advanceTurn(newState);
-      }
-
-      // Attacker won — check special square on the duel cell (non-bridge first, then bridge)
-      const spKey = `${duelState.ring}-${duelState.idx}`;
-      if (newState.specialsOnBoard[spKey]) {
-        const trigger = {
-          type: newState.specialsOnBoard[spKey].type,
-          ring: duelState.ring,
-          idx: duelState.idx,
-          figId: duelState.figId,
-          playerColor: duelState.atkColor,
-          placedBy: newState.specialsOnBoard[spKey].placedBy,
-        };
-        return applySpecialTrigger(newState, trigger);
-      }
-
-      return afterMove(newState, { type: 'move', ring: duelState.ring, idx: duelState.idx });
-      // Note: bridge check happens inside afterMove → afterLanding is not called here,
-      // but afterMove triggers bridge via the standard landing path.
+    case 'DUEL_SET_ROLL': {
+      const { who, roll } = action;
+      if (!state.duelState) return state;
+      return { ...state, duelState: { ...state.duelState, [who === 'atk' ? 'atkRoll' : 'defRoll']: roll } };
     }
 
     case 'RESOLVE_MOST': {
@@ -859,6 +860,11 @@ function reducer(state, action) {
       };
     }
 
+    case 'KOCKA_SET_ROLL': {
+      if (!state.specialTrigger || state.specialTrigger.type !== 'kocka') return state;
+      return { ...state, specialTrigger: { ...state.specialTrigger, d1: action.d1, d2: action.d2 } };
+    }
+
     case 'SYNC':
       return action.state;
 
@@ -879,10 +885,13 @@ export function useGame(setupPlayers) {
     dispatch({ type: 'PLACE_SPECIAL', ring, idx, specialType }), []);
   const resolveDuel = useCallback((atkRoll, defRoll) =>
     dispatch({ type: 'RESOLVE_DUEL', atkRoll, defRoll }), []);
+  const duelSetRoll = useCallback((who, roll) =>
+    dispatch({ type: 'DUEL_SET_ROLL', who, roll }), []);
   const resolveMost = useCallback((cross, trigger) =>
     dispatch({ type: 'RESOLVE_MOST', cross, trigger }), []);
   const resolveKocka = useCallback((trigger, d1, d2) =>
     dispatch({ type: 'RESOLVE_KOCKA', trigger, d1, d2 }), []);
+  const kockaSetRoll = useCallback((d1, d2) => dispatch({ type: 'KOCKA_SET_ROLL', d1, d2 }), []);
   const resolveZamjena = useCallback((trigger, targetColor, targetFigId) =>
     dispatch({ type: 'RESOLVE_ZAMJENA', trigger, targetColor, targetFigId }), []);
   const dismissSpecialInfo = useCallback(() => dispatch({ type: 'DISMISS_SPECIAL_INFO' }), []);
@@ -906,8 +915,10 @@ export function useGame(setupPlayers) {
     skipPlaceSpecial,
     placeSpecial,
     resolveDuel,
+    duelSetRoll,
     resolveMost,
     resolveKocka,
+    kockaSetRoll,
     resolveZamjena,
     dismissSpecialInfo,
     endTurn,
