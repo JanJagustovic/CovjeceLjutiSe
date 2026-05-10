@@ -273,9 +273,8 @@ function applyMove(state, move) {
     let newSpecials = { ...state.specialsOnBoard };
     const mover = newPlayers.find(p => p.color === player.color);
     const fig = mover.figures.find(f => f.id === move.figId);
-    fig.stopActive = false;
-    fig.rewindNext = false;
-    fig.bombActive = null;
+    // Do NOT clear stopActive/rewindNext/bombActive — the special field that caused
+    // those effects is still on the board, so the piece stays under its effect.
     mover.specialsHeld = [...mover.specialsHeld, 'most'];
     const newBridges = { ...state.bridgesOnBoard };
     delete newBridges[spKey];
@@ -498,8 +497,6 @@ function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
 function applySpecialTrigger(state, trigger) {
   const { type, ring, idx, figId, playerColor } = trigger;
   let newPlayers = deepCopyPlayers(state.players);
-  let newSpecials = { ...state.specialsOnBoard };
-  const spKey = `${ring}-${idx}`;
 
   if (type === 'bomba') {
     // Arm the figure — it must be moved next turn or it detonates.
@@ -741,32 +738,42 @@ function reducer(state, action) {
       const total = d1 + d2;
       const player = state.players[state.currentPlayerIndex];
       const pd = playerDef(player.color);
+      const len = pathLen(trigger.ring);
+      const cancelState = { ...state, specialTrigger: null, secondDiceValue: d1 * 10 + d2 };
 
       let newPlayers = deepCopyPlayers(state.players);
       const mover = newPlayers.find(p => p.color === trigger.playerColor);
       const fig = mover.figures.find(f => f.id === trigger.figId);
-      const len = pathLen(trigger.ring);
 
       if (trigger.ring === 'inner') {
         const stepsToFinish = (pd.finishEntryIdx - trigger.idx + len) % len;
         if (total <= stepsToFinish) {
-          fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
+          const targetIdx = advanceCW(trigger.idx, total, len);
+          const selfBlocked = mover.figures.some(f => f.id !== fig.id && typeof f.pos === 'object' && f.pos.ring === 'inner' && f.pos.idx === targetIdx);
+          if (selfBlocked) return advanceTurn(cancelState);
+          fig.pos = { ring: 'inner', idx: targetIdx };
         } else {
           const slot = total - stepsToFinish;
           if (slot >= 1 && slot <= 4) {
+            if (findFigureInFinish(state.players, player.color, 'finish', slot)) return advanceTurn(cancelState);
             fig.pos = { lane: 'finish', color: player.color, slot };
+          } else {
+            // Overshoot — no valid destination, cancel
+            return advanceTurn(cancelState);
           }
-          // else overshoot — figure stays put
         }
       } else {
-        fig.pos = { ring: trigger.ring, idx: advanceCW(trigger.idx, total, len) };
+        const targetIdx = advanceCW(trigger.idx, total, len);
+        const selfBlocked = mover.figures.some(f => f.id !== fig.id && typeof f.pos === 'object' && f.pos.ring === 'outer' && f.pos.idx === targetIdx);
+        if (selfBlocked) return advanceTurn(cancelState);
+        fig.pos = { ring: 'outer', idx: targetIdx };
       }
 
       const newState = { ...state, players: newPlayers, specialTrigger: null, secondDiceValue: d1 * 10 + d2 };
       if (typeof fig.pos === 'object' && fig.pos.ring) {
         return afterLanding(newState, newPlayers, fig.pos.ring, fig.pos.idx, trigger.figId, trigger.playerColor);
       }
-      // Landed in finish or stayed put — no collision possible
+      // Landed in finish — no collision possible
       return afterMove(newState, { type: 'move', ring: trigger.ring, idx: trigger.idx });
     }
 

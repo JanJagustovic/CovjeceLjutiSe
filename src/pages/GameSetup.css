@@ -174,4 +174,13 @@
   padding: var(--sp-md);
   border-top: 1px solid var(--border);
   background: var(--bg-secondary);
+  display: flex;
+  justify-content: center;
+}
+
+.setup-start-btn {
+  max-width: 480px;
+  width: 100%;
+  padding: var(--sp-sm) var(--sp-md);
+  font-size: 0.95rem;
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -44,6 +44,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
   const [duelRolls, setDuelRolls] = useState({ atk: null, def: null });
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [inStuckRolls, setInStuckRolls] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(30);
+  const autoAdvanceRef = useRef(null);
 
   // Derived
   const phase = state.phase;
@@ -77,6 +79,34 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     if (state.rollsLeft === 3) setInStuckRolls(true);
     if (!isRolling) setInStuckRolls(false);
   }, [state.rollsLeft, isRolling]);
+
+  // Keep auto-advance ref current so interval closure always calls latest callbacks
+  autoAdvanceRef.current = () => {
+    if (!isMyTurn) return;
+    if (phase === 'placing-special') skipPlaceSpecial();
+    else if (phase === 'rolling' || phase === 'moving') endTurn();
+    else if (phase === 'special-trigger') dismissSpecialInfo();
+    else if (phase === 'duel') {
+      const a = Math.floor(Math.random() * 6) + 1;
+      const d = Math.floor(Math.random() * 6) + 1;
+      resolveDuel(a, d);
+      setDuelRolls({ atk: null, def: null });
+    }
+  };
+
+  // Reset and start 30s countdown whenever a meaningful state change occurs
+  const stateKey = `${state.currentPlayerIndex}-${phase}-${state.diceValue}-${state.rollsLeft}`;
+  useEffect(() => {
+    if (isOver || isInitialRoll) return;
+    setTimeLeft(30);
+    const id = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) { autoAdvanceRef.current?.(); return 30; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [stateKey, isOver, isInitialRoll]);
 
   // Auto-advance after showing the dice result when there are no valid moves
   useEffect(() => {
@@ -201,6 +231,16 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           </button>
         </div>
       </div>
+
+      {/* Turn timer bar */}
+      {!isOver && !isInitialRoll && (
+        <div className="game-timer-track">
+          <div
+            className={`game-timer-bar ${timeLeft <= 7 ? 'game-timer-bar--urgent' : timeLeft <= 15 ? 'game-timer-bar--warning' : ''}`}
+            style={{ width: `${(timeLeft / 30) * 100}%` }}
+          />
+        </div>
+      )}
 
       {/* Board */}
       <div className="game-board-area" ref={boardAreaRef}>

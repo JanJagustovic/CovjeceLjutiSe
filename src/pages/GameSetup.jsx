@@ -115,7 +115,7 @@ export default function GameSetup() {
       </div>
 
       <div className="setup-footer">
-        <button className="btn btn-primary btn-lg" style={{ width: '100%' }} onClick={startGame}>
+        <button className="btn btn-primary setup-start-btn" onClick={startGame}>
           🎮 {t('setupStart')}
         </button>
       </div>

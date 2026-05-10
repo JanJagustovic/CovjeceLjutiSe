@@ -34,6 +34,27 @@
   gap: 2px;
 }
 
+.game-timer-track {
+  height: 4px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.game-timer-bar {
+  height: 100%;
+  background: var(--accent);
+  transition: width 1s linear, background-color 0.3s;
+}
+
+.game-timer-bar--warning {
+  background: #fb8c00;
+}
+
+.game-timer-bar--urgent {
+  background: #e53935;
+  animation: pulse 0.6s ease-in-out infinite;
+}
+
 .game-board-area {
   flex: 1;
   display: flex;
