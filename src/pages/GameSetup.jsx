@@ -56,14 +56,14 @@ export default function GameSetup() {
   return (
     <div className="setup-page page">
       <div className="setup-header">
-        <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
+        <button className="btn btn-ghost setup-back-btn" onClick={() => navigate('/')}>←</button>
         <h2 className="setup-title">{t('setupTitle')}</h2>
-        <div style={{ display: 'flex', gap: '2px', marginLeft: 'auto' }}>
-          <button className="btn btn-ghost" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
-            {lang === 'hr' ? 'EN' : 'HR'}
+        <div className="setup-header-actions">
+          <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+            {lang.toUpperCase()}
           </button>
-          <button className="btn btn-ghost" onClick={toggleTheme} aria-label="Toggle theme">
-            {theme === 'dark' ? '☀️' : '🌙'}
+          <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '🌙' : '☀️'}
           </button>
         </div>
       </div>

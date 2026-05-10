@@ -13,10 +13,10 @@ export default function MainMenu() {
       <div className="menu-header">
         <div style={{ display: 'flex', gap: '2px' }}>
           <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
-            {lang === 'hr' ? 'EN' : 'HR'}
+            {lang.toUpperCase()}
           </button>
           <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
-            {theme === 'dark' ? '☀️' : '🌙'}
+            {theme === 'dark' ? '🌙' : '☀️'}
           </button>
         </div>
       </div>

@@ -8,6 +8,12 @@
   align-items: center;
 }
 
+@media (max-width: 480px) {
+  .player-panel {
+    padding: 20px var(--sp-md);
+  }
+}
+
 .panel-current {
   display: flex;
   align-items: center;
@@ -17,13 +23,20 @@
   position: relative;
 }
 
+.panel-current-mirror {
+  width: 106px;
+  flex-shrink: 0;
+}
+
 .panel-place-actions {
-  position: absolute;
-  right: 0;
   display: flex;
   gap: 6px;
   align-items: center;
+  width: 106px;
+  flex-shrink: 0;
+  justify-content: flex-start;
 }
+
 
 .panel-action-btn {
   width: 32px;

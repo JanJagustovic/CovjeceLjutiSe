@@ -42,6 +42,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
 
   const [selectedSpecialType, setSelectedSpecialType] = useState(null);
   const [duelRolls, setDuelRolls] = useState({ atk: null, def: null });
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [inStuckRolls, setInStuckRolls] = useState(false);
 
   // Derived
   const phase = state.phase;
@@ -69,6 +71,12 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
         );
       })
     : false;
+
+  // Track when player is in stuck 3-roll mode
+  useEffect(() => {
+    if (state.rollsLeft === 3) setInStuckRolls(true);
+    if (!isRolling) setInStuckRolls(false);
+  }, [state.rollsLeft, isRolling]);
 
   // Auto-advance after showing the dice result when there are no valid moves
   useEffect(() => {
@@ -176,9 +184,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
     <div className="gameboard-page page">
       {/* Top bar */}
       <div className="game-topbar">
-        <button className="btn btn-ghost" onClick={() => navigate('/')} style={{ fontSize: '0.85rem' }}>
-          ✕
-        </button>
+        <button className="btn btn-ghost game-exit-btn" onClick={() => setShowExitConfirm(true)}>✕</button>
         <span className="game-turn-label" style={{ color: COLOR_HEX[currentPlayer.color] }}>
           {currentPlayer.name}
           {phase === 'rolling' && ' — 🎲'}
@@ -186,12 +192,12 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           {phase === 'placing-special' && ` — ${t('gamePhasePlacing')}`}
           {phase === 'duel' && ` — ${t('gamePhaseDuel')}`}
         </span>
-        <div style={{ display: 'flex', gap: '2px' }}>
-          <button className="btn btn-ghost" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')} style={{ fontSize: '0.8rem', fontWeight: 700 }}>
-            {lang === 'hr' ? 'EN' : 'HR'}
+        <div className="game-topbar-actions">
+          <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+            {lang.toUpperCase()}
           </button>
-          <button className="btn btn-ghost" onClick={toggleTheme} style={{ fontSize: '1.1rem' }}>
-            {theme === 'dark' ? '☀️' : '🌙'}
+          <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '🌙' : '☀️'}
           </button>
         </div>
       </div>
@@ -206,6 +212,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          '--target-highlight': `${COLOR_HEX[currentPlayer.color]}66`,
         }}>
           <Board
             gamePlayers={state.players}
@@ -220,6 +227,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
             diceValue={state.diceValue}
             diceDisabled={!isRolling || !isMyTurn}
             rollsLeft={state.rollsLeft}
+            showRollCount={inStuckRolls}
           />
         </div>
       </div>
@@ -359,6 +367,15 @@ export default function GameBoard({ gameHook = null, isMyTurn = true }) {
           onStart={isMyTurn ? startGame : null}
           t={t}
         />
+      )}
+
+      {/* Exit confirmation modal */}
+      {showExitConfirm && (
+        <Modal title={t('exitConfirmTitle')}>
+          <p style={{ textAlign: 'center' }}>{t('exitConfirmMsg')}</p>
+          <button className="btn btn-danger" onClick={() => navigate('/')}>{t('exitConfirmYes')}</button>
+          <button className="btn btn-secondary" onClick={() => setShowExitConfirm(false)}>{t('exitConfirmNo')}</button>
+        </Modal>
       )}
 
       {/* Win modal */}

@@ -11,7 +11,7 @@ const CENTER_PIPS = {
   6: [[25,22],[75,22],[25,50],[75,50],[25,78],[75,78]],
 };
 
-function CenterDie({ value, onRoll, disabled, rollsLeft }) {
+function CenterDie({ value, onRoll, disabled, rollsLeft, showRollCount }) {
   const [rolling, setRolling] = useState(false);
 
   function handleRoll() {
@@ -34,7 +34,7 @@ function CenterDie({ value, onRoll, disabled, rollsLeft }) {
           : <span className="center-die-label">🎲</span>
         }
       </div>
-      {!disabled && rollsLeft > 1 && (
+      {!disabled && showRollCount && (
         <span className="center-die-rolls">{rollsLeft}×</span>
       )}
     </div>
@@ -182,6 +182,7 @@ export default function Board({
   diceValue,
   diceDisabled,
   rollsLeft,
+  showRollCount,
 }) {
   const players = Array.isArray(gamePlayers) ? gamePlayers : [];
   const spawnMap = buildSpawnMap(players);
@@ -321,6 +322,7 @@ export default function Board({
           onRoll={onRoll}
           disabled={diceDisabled}
           rollsLeft={rollsLeft}
+          showRollCount={showRollCount}
         />
       )}
     </div>

@@ -283,6 +283,10 @@
   50%       { opacity: 0.6; }
 }
 
+[data-theme='light'] .figure {
+  border-color: rgba(0,0,0,0.6);
+}
+
 @supports (container-type: size) {
   .board-wrapper {
     --bs: min(100cqw, 100cqh);

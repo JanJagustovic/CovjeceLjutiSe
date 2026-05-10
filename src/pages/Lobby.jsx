@@ -8,10 +8,6 @@ import { useTheme } from '../contexts/ThemeContext';
 import { PLAYER_ORDER } from '../data/boardLayout';
 import './Lobby.css';
 
-const COLOR_HEX = {
-  red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-  cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
-};
 
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -97,10 +93,10 @@ export default function Lobby() {
       <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
       <div style={{ display: 'flex', gap: '2px' }}>
         <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
-          {lang === 'hr' ? 'EN' : 'HR'}
+          {lang.toUpperCase()}
         </button>
         <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
-          {theme === 'dark' ? '☀️' : '🌙'}
+          {theme === 'dark' ? '🌙' : '☀️'}
         </button>
       </div>
     </div>

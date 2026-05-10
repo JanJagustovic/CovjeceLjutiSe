@@ -1,6 +1,6 @@
 const en = {
   // App
-  appName: "Man Don't Get Angry",
+  appName: "Man Get Angry",
 
   // Navigation
   navMenu:     'Menu',
@@ -64,7 +64,7 @@ const en = {
   ok:     'OK',
   duelVs: 'vs',
 
-  menuFooter: '2–8 players · Dynamic mode',
+  menuFooter: '2–8 players',
 
   zamjenaNoFigs:    'No pieces available to swap.',
   zamjenaFig:       'Piece',
@@ -136,6 +136,11 @@ const en = {
   lobbySignOut:         'Sign out',
   lobbyCreateError:     'Failed to create room. Check your connection.',
   lobbyJoinError:       'Failed to join. Try again.',
+
+  exitConfirmTitle: 'Exit game?',
+  exitConfirmMsg:   'Are you sure you want to quit the current game?',
+  exitConfirmYes:   'Exit',
+  exitConfirmNo:    'Keep playing',
 
   // Online game
   onlineNotYourTurn:    "Wait for your turn",

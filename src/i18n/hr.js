@@ -64,7 +64,7 @@ const hr = {
   ok:     'OK',
   duelVs: 'vs',
 
-  menuFooter: '2–8 igrača · Dinamički mod',
+  menuFooter: '2–8 igrača',
 
   zamjenaNoFigs:    'Nema slobodnih figurica za zamjenu.',
   zamjenaFig:       'Figurica',
@@ -136,6 +136,11 @@ const hr = {
   lobbySignOut:         'Odjava',
   lobbyCreateError:     'Greška pri stvaranju sobe. Provjeri vezu.',
   lobbyJoinError:       'Greška pri pridruživanju. Pokušaj ponovo.',
+
+  exitConfirmTitle: 'Izlaz iz igre?',
+  exitConfirmMsg:   'Jesi li siguran da želiš napustiti trenutnu igru?',
+  exitConfirmYes:   'Izlaz',
+  exitConfirmNo:    'Nastavi igru',
 
   // Online game
   onlineNotYourTurn:    'Čekaj na svoj potez',

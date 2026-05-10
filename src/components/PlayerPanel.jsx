@@ -41,6 +41,7 @@ export default function PlayerPanel({
     <div className="player-panel">
       {/* Current player row */}
       <div className="panel-current">
+        <div className="panel-current-mirror" />
         <div
           className="panel-avatar"
           style={{ backgroundColor: COLOR_HEX[current.color] }}
@@ -51,28 +52,33 @@ export default function PlayerPanel({
           <span className="panel-name">{current.name}</span>
           <span className="panel-status">
             🏠{atHome} · 🎯{onBoard} · 🏁{inFinish}
-            {diceValue && <span className="panel-dice"> · 🎲{diceValue}</span>}
           </span>
         </div>
-        {(phase === 'placing-special' || (phase === 'moving' && hasPickup)) && (
-          <div className="panel-place-actions">
-            {phase === 'moving' && hasPickup && (
-              <button className="panel-action-btn panel-action-btn--pickup" onClick={onPickup} title="Pick up field">
-                ⬆
-              </button>
-            )}
-            {phase === 'placing-special' && selectedSpecial && (
-              <button className="panel-action-btn panel-action-btn--confirm" onClick={onConfirmPlaceSpecial}>
-                ✓
-              </button>
-            )}
-            {phase === 'placing-special' && (
-              <button className="panel-action-btn panel-action-btn--skip" onClick={onSkipPlaceSpecial}>
-                ✕
-              </button>
-            )}
-          </div>
-        )}
+        {(() => {
+          const showActions = phase === 'placing-special' || (phase === 'moving' && hasPickup);
+          return (
+            <div
+              className="panel-place-actions"
+              style={{ visibility: showActions ? 'visible' : 'hidden', pointerEvents: showActions ? 'auto' : 'none' }}
+            >
+              <button
+                className="panel-action-btn panel-action-btn--pickup"
+                onClick={onPickup}
+                style={{ visibility: (phase === 'moving' && hasPickup) ? 'visible' : 'hidden', pointerEvents: (phase === 'moving' && hasPickup) ? 'auto' : 'none' }}
+              >⬆</button>
+              <button
+                className="panel-action-btn panel-action-btn--confirm"
+                onClick={onConfirmPlaceSpecial}
+                style={{ visibility: (phase === 'placing-special' && selectedSpecial) ? 'visible' : 'hidden', pointerEvents: (phase === 'placing-special' && selectedSpecial) ? 'auto' : 'none' }}
+              >✓</button>
+              <button
+                className="panel-action-btn panel-action-btn--skip"
+                onClick={onSkipPlaceSpecial}
+                style={{ visibility: phase === 'placing-special' ? 'visible' : 'hidden', pointerEvents: phase === 'placing-special' ? 'auto' : 'none' }}
+              >✕</button>
+            </div>
+          );
+        })()}
       </div>
 
       {/* Specials in hand — always rendered to keep panel height constant */}
