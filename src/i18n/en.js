@@ -103,12 +103,8 @@ const en = {
   specialRewindMsg:   'Rewind! Next move goes backward.',
   specialKockaMsg:    'Dice! Roll two dice.',
 
-  inHandLabel: 'In hand',
-  noSpecials:  'No special squares',
-
   // Rules
   rulesTitle:   'Game Rules',
-  rulesDynamic: 'Dynamic',
 
   // Settings
   settingsTitle:     'Settings',

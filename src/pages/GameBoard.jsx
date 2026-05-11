@@ -324,7 +324,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
           players={state.players}
           currentPlayerIndex={state.currentPlayerIndex}
           phase={phase}
-          diceValue={state.diceValue}
+          isMyTurn={isMyTurn}
           onSelectSpecialForPlace={type => {
             if (!isMyTurn) return;
             if (type === 'most' && !mostCanPlace) return;
@@ -577,12 +577,7 @@ function KockaModal({ t, trigger, onKockaSetRoll, onKocka, isMyTurn = true }) {
   );
 }
 
-function SpecialModal({ trigger, players, t, isMyTurn = true, onMost, onKockaSetRoll, onKocka, onDismiss }) {
-  const COLOR_HEX = {
-    red: '#e53935', yellow: '#fdd835', blue: '#1e88e5', green: '#43a047',
-    cyan: '#00838f', purple: '#8e24aa', magenta: '#f06292', orange: '#fb8c00',
-  };
-
+function SpecialModal({ trigger, t, isMyTurn = true, onMost, onKockaSetRoll, onKocka, onDismiss }) {
   if (trigger.type === 'stop') {
     return (
       <Modal title={`⏸️ ${t('specialStop')}`}>

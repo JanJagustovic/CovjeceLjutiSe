@@ -35,14 +35,6 @@ function buildInnerPath() {
 export const OUTER_PATH = buildOuterPath();
 export const INNER_PATH = buildInnerPath();
 
-// Helper: get path index for a given cell on a path
-export function getOuterIndex(r, c) {
-  return OUTER_PATH.findIndex(p => p.r === r && p.c === c);
-}
-export function getInnerIndex(r, c) {
-  return INNER_PATH.findIndex(p => p.r === r && p.c === c);
-}
-
 // Advance index clockwise by `steps` on a path of length `len`
 export function advanceCW(idx, steps, len) {
   return (idx + steps) % len;
@@ -185,17 +177,6 @@ function buildGrid() {
 }
 
 export const GRID = buildGrid();
-
-// Helper: check if a position is the finish entry for a player (inner ring only)
-export function isFinishEntry(ring, idx, colorKey) {
-  if (ring !== 'inner') return false;
-  return idx === PLAYERS[colorKey].finishEntryIdx;
-}
-
-// Calculate the number of steps between two path indices (clockwise)
-export function stepsBetween(fromIdx, toIdx, pathLen) {
-  return (toIdx - fromIdx + pathLen) % pathLen;
-}
 
 // Special square types
 export const SPECIAL_TYPES = ['most', 'kocka', 'rewind', 'bomba', 'stop', 'zamjena'];

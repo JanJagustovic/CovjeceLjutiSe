@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PLAYER_ORDER, PLAYERS } from '../data/boardLayout';
 import './Lobby.css';
+import './GameSetup.css';
 
 const COLOR_HEX = Object.fromEntries(
   Object.entries(PLAYERS).map(([k, v]) => [k, v.color])
@@ -16,9 +17,11 @@ export default function LobbyRoom() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { t } = useLanguage();
-  const [room, setRoom]   = useState(null);
+  const [room, setRoom]     = useState(null);
   const [joined, setJoined] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]   = useState('');
+  const [myName, setMyName] = useState('');
+  const initializedRef      = useRef(false);
 
   useEffect(() => {
     if (!roomId || loading) return;
@@ -26,13 +29,11 @@ export default function LobbyRoom() {
       if (!snap.exists()) { navigate('/lobby'); return; }
       const data = { id: snap.id, ...snap.data() };
       setRoom(data);
-      if (data.status === 'active') {
-        navigate(`/online/${roomId}`);
-      }
+      if (data.status === 'active') navigate(`/online/${roomId}`);
     });
   }, [roomId, loading]);
 
-  // Join: add this user to players[] once we have both room and user
+  // Join once room + user are ready
   useEffect(() => {
     if (!room || !user || joined || loading) return;
     const alreadyIn = room.players.some(p => p.uid === user.uid);
@@ -57,6 +58,37 @@ export default function LobbyRoom() {
       .catch(err => { console.error(err); setError('Could not join room.'); });
   }, [room, user, joined, loading]);
 
+  // Initialize local name once from Firestore (only on first join)
+  const me = room?.players.find(p => p.uid === user?.uid);
+  useEffect(() => {
+    if (initializedRef.current || !me) return;
+    setMyName(me.name);
+    initializedRef.current = true;
+  }, [me]);
+
+  function updateMyField(updates) {
+    if (!room || !user) return;
+    const updated = room.players.map(p =>
+      p.uid === user.uid ? { ...p, ...updates } : p
+    );
+    updateDoc(doc(db, 'rooms', roomId), {
+      players: updated,
+      updatedAt: serverTimestamp(),
+    }).catch(err => console.error(err));
+  }
+
+  function handleNameBlur() {
+    const name = myName.trim() || me?.name || 'Player';
+    setMyName(name);
+    updateMyField({ name });
+  }
+
+  function handleColorChange(color) {
+    const takenByOthers = room.players.filter(p => p.uid !== user.uid).map(p => p.color);
+    if (takenByOthers.includes(color)) return;
+    updateMyField({ color });
+  }
+
   async function handleStart() {
     await updateDoc(doc(db, 'rooms', roomId), {
       status: 'active',
@@ -66,8 +98,10 @@ export default function LobbyRoom() {
 
   if (loading || !room) return <div className="page lobby-room-page"><p style={{ padding: 20 }}>...</p></div>;
 
-  const isHost    = room.hostUid === user?.uid;
-  const canStart  = isHost && room.players.length >= 2;
+  const isHost          = room.hostUid === user?.uid;
+  const canStart        = isHost && room.players.length >= 2;
+  const takenByOthers   = new Set(room.players.filter(p => p.uid !== user?.uid).map(p => p.color));
+  const otherPlayers    = room.players.filter(p => p.uid !== user?.uid);
 
   return (
     <div className="page lobby-room-page">
@@ -82,24 +116,56 @@ export default function LobbyRoom() {
           <p className="lobby-code-hint">{t('lobbyShareCode')}</p>
         </div>
 
-        <div>
-          <p className="lobby-players-title">{t('lobbyPlayers')}</p>
-          <div className="lobby-players-list">
-            {room.players.map(p => (
-              <div key={p.uid} className="lobby-player-row">
-                <span
-                  className="lobby-player-dot"
-                  style={{ background: COLOR_HEX[p.color] }}
+        {/* My editable player card */}
+        {me && (
+          <div>
+            <p className="lobby-players-title">{t('lobbyYou')}</p>
+            <div className="player-card card">
+              <div className="player-card-top">
+                <div className="player-avatar" style={{ backgroundColor: COLOR_HEX[me.color] }}>
+                  {myName.charAt(0).toUpperCase() || '?'}
+                </div>
+                <input
+                  className="player-name-input"
+                  value={myName}
+                  maxLength={14}
+                  onChange={e => setMyName(e.target.value)}
+                  onBlur={handleNameBlur}
                 />
-                <span className={`lobby-player-name${p.uid === user?.uid ? ' is-me' : ''}`}>
-                  {p.name}
-                  {p.uid === room.hostUid ? ' 👑' : ''}
-                  {p.uid === user?.uid ? ` (${t('lobbyYou')})` : ''}
-                </span>
               </div>
-            ))}
+              <div className="player-colors">
+                {PLAYER_ORDER.map(color => (
+                  <button
+                    key={color}
+                    className={`color-dot ${me.color === color ? 'color-dot--active' : ''} ${takenByOthers.has(color) ? 'color-dot--taken' : ''}`}
+                    style={{ backgroundColor: COLOR_HEX[color] }}
+                    onClick={() => handleColorChange(color)}
+                    disabled={takenByOthers.has(color)}
+                    aria-label={color}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Other players — read-only */}
+        {otherPlayers.length > 0 && (
+          <div>
+            <p className="lobby-players-title">{t('lobbyPlayers')}</p>
+            <div className="lobby-players-list">
+              {otherPlayers.map(p => (
+                <div key={p.uid} className="lobby-player-row">
+                  <span className="lobby-player-dot" style={{ background: COLOR_HEX[p.color] }} />
+                  <span className="lobby-player-name">
+                    {p.name}
+                    {p.uid === room.hostUid ? ' 👑' : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {error && <p className="lobby-error">{error}</p>}
 
@@ -108,7 +174,6 @@ export default function LobbyRoom() {
             🎮 {t('setupStart')}
           </button>
         )}
-
         {isHost && !canStart && (
           <p className="lobby-status-msg">{t('lobbyWaitingPlayers')}</p>
         )}

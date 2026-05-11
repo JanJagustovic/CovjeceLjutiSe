@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import './Rules.css';
 
 const SPECIALS = {
@@ -142,13 +143,22 @@ function RulesContent({ lang }) {
 
 export default function Rules() {
   const navigate = useNavigate();
-  const { t, lang } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <div className="rules-page page">
       <div className="rules-header">
-        <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('navBack')}</button>
+        <button className="btn btn-ghost setup-back-btn" onClick={() => navigate('/')}>←</button>
         <h2 className="rules-title">{t('rulesTitle')}</h2>
+        <div className="setup-header-actions">
+          <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+            {lang.toUpperCase()}
+          </button>
+          <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+        </div>
       </div>
       <div className="rules-scroll">
         <RulesContent lang={lang} />

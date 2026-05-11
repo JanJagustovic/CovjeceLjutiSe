@@ -40,9 +40,7 @@ function initState(setupPlayers) {
     bridgesOnBoard: {},
     duelState: null,
     specialTrigger: null,
-    exitChoice: null,
     winner: null,
-    log: [],
     // Initial roll state (rule 2)
     initialRollOrder: setupPlayers.map(sp => sp.color),
     initialRolls: {},     // colorKey → value rolled this round

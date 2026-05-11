@@ -103,12 +103,8 @@ const hr = {
   specialRewindMsg:   'Rewind! Sljedeći potez ide unazad.',
   specialKockaMsg:    'Kocka! Baci dvije kocke.',
 
-  inHandLabel:     'U ruci',
-  noSpecials:      'Bez posebnih polja',
-
   // Rules
   rulesTitle:   'Pravila igre',
-  rulesDynamic: 'Dinamički',
 
   // Settings
   settingsTitle:    'Postavke',

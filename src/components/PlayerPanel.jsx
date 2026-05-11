@@ -13,7 +13,7 @@ export default function PlayerPanel({
   players,
   currentPlayerIndex,
   phase,
-  diceValue,
+  isMyTurn = true,
   onSelectSpecialForPlace,
   selectedSpecial,
   mostCanPlace,
@@ -41,21 +41,22 @@ export default function PlayerPanel({
     <div className="player-panel">
       {/* Current player row */}
       <div className="panel-current">
-        <div className="panel-current-mirror" />
-        <div
-          className="panel-avatar"
-          style={{ backgroundColor: COLOR_HEX[current.color] }}
-        >
-          {current.name.charAt(0).toUpperCase()}
-        </div>
-        <div className="panel-info">
-          <span className="panel-name">{current.name}</span>
-          <span className="panel-status">
-            🏠{atHome} · 🎯{onBoard} · 🏁{inFinish}
-          </span>
+        <div className="panel-center-group">
+          <div
+            className="panel-avatar"
+            style={{ backgroundColor: COLOR_HEX[current.color] }}
+          >
+            {current.name.charAt(0).toUpperCase()}
+          </div>
+          <div className="panel-info">
+            <span className="panel-name">{current.name}</span>
+            <span className="panel-status">
+              🏠{atHome} · 🎯{onBoard} · 🏁{inFinish}
+            </span>
+          </div>
         </div>
         {(() => {
-          const showActions = phase === 'placing-special' || (phase === 'moving' && hasPickup);
+          const showActions = isMyTurn && (phase === 'placing-special' || (phase === 'moving' && hasPickup));
           return (
             <div
               className="panel-place-actions"
