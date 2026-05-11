@@ -475,28 +475,39 @@ function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
   const parallel = getBridgeParallel(ring, idx);
   const bridgeKey = spKey;
   if (state.bridgesOnBoard[bridgeKey]) {
-    const trigger = {
-      type: 'most',
-      ring,
-      idx,
-      figId,
-      playerColor,
-      placedBy: state.bridgesOnBoard[bridgeKey].placedBy,
-    };
-    return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
-  }
-  if (parallel) {
-    const parallelKey = `${parallel.ring}-${parallel.idx}`;
-    if (state.bridgesOnBoard[parallelKey]) {
+    // Only offer crossing if the destination isn't occupied by the mover's own piece
+    const destBlockedByOwn = parallel && !!findFigureOnCell(
+      newPlayers.filter(p => p.color === playerColor), parallel.ring, parallel.idx
+    );
+    if (!destBlockedByOwn) {
       const trigger = {
         type: 'most',
         ring,
         idx,
         figId,
         playerColor,
-        placedBy: state.bridgesOnBoard[parallelKey].placedBy,
+        placedBy: state.bridgesOnBoard[bridgeKey].placedBy,
       };
       return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
+    }
+  }
+  if (parallel) {
+    const parallelKey = `${parallel.ring}-${parallel.idx}`;
+    if (state.bridgesOnBoard[parallelKey]) {
+      const destBlockedByOwn = !!findFigureOnCell(
+        newPlayers.filter(p => p.color === playerColor), parallel.ring, parallel.idx
+      );
+      if (!destBlockedByOwn) {
+        const trigger = {
+          type: 'most',
+          ring,
+          idx,
+          figId,
+          playerColor,
+          placedBy: state.bridgesOnBoard[parallelKey].placedBy,
+        };
+        return applySpecialTrigger({ ...state, players: newPlayers }, trigger);
+      }
     }
   }
   return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
@@ -688,6 +699,14 @@ function reducer(state, action) {
       }
       const dest = getBridgeParallel(trigger.ring, trigger.idx);
       if (!dest) {
+        return afterMove({ ...state, specialTrigger: null }, { type: 'move', ring: trigger.ring, idx: trigger.idx });
+      }
+
+      // Can't cross if own piece (other than the mover) is already on the destination
+      const ownBlocksDest = state.players
+        .filter(p => p.color === trigger.playerColor)
+        .some(p => p.figures.some(f => f.id !== trigger.figId && figureOnPath(f.pos, dest.ring, dest.idx)));
+      if (ownBlocksDest) {
         return afterMove({ ...state, specialTrigger: null }, { type: 'move', ring: trigger.ring, idx: trigger.idx });
       }
 

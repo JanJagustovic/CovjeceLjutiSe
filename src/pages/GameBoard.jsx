@@ -130,10 +130,10 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
     return () => clearTimeout(timer);
   }, [isNoMoves, endTurn]);
 
-  // Auto-dismiss "own zamjena" info after 1.5s
+  // Auto-dismiss "own zamjena" info after 2.5s
   useEffect(() => {
     if (!isSpecial || state.specialTrigger?.type !== 'zamjena-own') return;
-    const id = setTimeout(dismissSpecialInfo, 1500);
+    const id = setTimeout(dismissSpecialInfo, 2500);
     return () => clearTimeout(id);
   }, [isSpecial, state.specialTrigger?.type]);
 

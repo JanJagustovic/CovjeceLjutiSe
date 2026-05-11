@@ -4,6 +4,7 @@ import { doc, onSnapshot, updateDoc, arrayUnion, serverTimestamp } from 'firebas
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { PLAYER_ORDER, PLAYERS } from '../data/boardLayout';
 import Modal from '../components/Modal.jsx';
 import './Lobby.css';
@@ -17,7 +18,8 @@ export default function LobbyRoom() {
   const { roomId } = useParams();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang, setLanguage } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [room, setRoom]           = useState(null);
   const [joined, setJoined]       = useState(false);
   const [error, setError]         = useState('');
@@ -126,6 +128,14 @@ export default function LobbyRoom() {
     <div className="page lobby-room-page">
       <div className="lobby-header">
         <button className="btn btn-ghost setup-back-btn" onClick={() => setShowLeaveConfirm(true)}>←</button>
+        <div style={{ display: 'flex', gap: '2px' }}>
+          <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
+            {lang.toUpperCase()}
+          </button>
+          <button className="btn btn-ghost menu-theme-btn" onClick={toggleTheme} aria-label="Toggle theme">
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+        </div>
       </div>
 
       <div className="lobby-room-content">
