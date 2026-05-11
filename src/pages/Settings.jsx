@@ -11,7 +11,7 @@ export default function Settings() {
   return (
     <div className="settings-page page">
       <div className="settings-header">
-        <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('navBack')}</button>
+        <button className="btn btn-ghost setup-back-btn" onClick={() => navigate('/')}>←</button>
         <h2 className="settings-title">{t('settingsTitle')}</h2>
       </div>
 

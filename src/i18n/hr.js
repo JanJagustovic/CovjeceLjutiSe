@@ -69,6 +69,7 @@ const hr = {
   zamjenaNoFigs:    'Nema slobodnih figurica za zamjenu.',
   zamjenaFig:       'Figurica',
   zamjenaSkip:      'Preskoči',
+  zamjenaOwnField:  'Ovo je tvoje vlastito polje ZAMJENA — nema efekta.',
 
   mostCannotPlace:  'MOST nije moguć — nema slobodnog paralelnog polja',
   mostCannotField:  'MOST nije moguć na ovom polju',
@@ -132,6 +133,11 @@ const hr = {
   lobbySignOut:         'Odjava',
   lobbyCreateError:     'Greška pri stvaranju sobe. Provjeri vezu.',
   lobbyJoinError:       'Greška pri pridruživanju. Pokušaj ponovo.',
+
+  lobbyLeaveTitle: 'Napusti sobu?',
+  lobbyLeaveMsg:   'Jesi li siguran da želiš napustiti sobu?',
+  lobbyLeaveYes:   'Napusti',
+  lobbyLeaveNo:    'Ostani',
 
   exitConfirmTitle: 'Izlaz iz igre?',
   exitConfirmMsg:   'Jesi li siguran da želiš napustiti trenutnu igru?',

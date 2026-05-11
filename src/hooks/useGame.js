@@ -452,9 +452,14 @@ function afterLanding(state, newPlayers, ring, idx, figId, playerColor) {
   const spKey = `${ring}-${idx}`;
   if (state.specialsOnBoard[spKey]) {
     const sp = state.specialsOnBoard[spKey];
-    // ZAMJENA placed by the same player who landed on it — skip (can't swap with yourself)
+    // ZAMJENA placed by the same player who landed on it — show info, then afterMove on dismiss
     if (sp.type === 'zamjena' && sp.placedBy === playerColor) {
-      return afterMove({ ...state, players: newPlayers }, { type: 'move', ring, idx });
+      return {
+        ...state,
+        players: newPlayers,
+        phase: 'special-trigger',
+        specialTrigger: { type: 'zamjena-own', ring, idx, figId, playerColor, placedBy: sp.placedBy },
+      };
     }
     const trigger = {
       type: sp.type,
@@ -777,7 +782,11 @@ function reducer(state, action) {
     }
 
     case 'DISMISS_SPECIAL_INFO': {
+      const trigger = state.specialTrigger;
       const newState = { ...state, specialTrigger: null };
+      if (trigger?.type === 'zamjena-own') {
+        return afterMove(newState, { type: 'move', ring: trigger.ring, idx: trigger.idx });
+      }
       if (newState.bonusRoll) {
         return { ...newState, phase: 'rolling', diceValue: null, bonusRoll: false, rollsLeft: 1 };
       }
@@ -865,6 +874,103 @@ function reducer(state, action) {
 
     case 'SYNC':
       return action.state;
+
+    case 'REMOVE_PLAYER': {
+      if (state.phase === 'game-over') return state;
+      const { color } = action;
+      const removedIdx = state.players.findIndex(p => p.color === color);
+      if (removedIdx === -1) return state;
+
+      const newPlayers = state.players.filter(p => p.color !== color);
+      const newSpecials = Object.fromEntries(
+        Object.entries(state.specialsOnBoard).filter(([, v]) => v.placedBy !== color)
+      );
+      const newBridges = Object.fromEntries(
+        Object.entries(state.bridgesOnBoard).filter(([, v]) => v.placedBy !== color)
+      );
+
+      if (newPlayers.length <= 1) {
+        return {
+          ...state,
+          players: newPlayers,
+          specialsOnBoard: newSpecials,
+          bridgesOnBoard: newBridges,
+          winner: newPlayers[0]?.color ?? null,
+          phase: 'game-over',
+          duelState: null,
+          specialTrigger: null,
+        };
+      }
+
+      // Handle initial-roll phase: remove from roll order
+      if (state.phase === 'initial-roll') {
+        const newOrder = state.initialRollOrder.filter(c => c !== color);
+        const newRolls = Object.fromEntries(
+          Object.entries(state.initialRolls).filter(([c]) => c !== color)
+        );
+        if (newOrder.length === 0) {
+          return {
+            ...state,
+            players: newPlayers,
+            specialsOnBoard: newSpecials,
+            bridgesOnBoard: newBridges,
+            phase: 'rolling',
+            currentPlayerIndex: 0,
+            rollsLeft: isAllStuck(newPlayers[0]) ? 3 : 1,
+            initialRollOrder: newOrder,
+            initialRolls: newRolls,
+            initialRollIdx: 0,
+          };
+        }
+        const removedOrderIdx = state.initialRollOrder.indexOf(color);
+        let newRollIdx = state.initialRollIdx;
+        if (removedOrderIdx !== -1 && removedOrderIdx < state.initialRollIdx) newRollIdx--;
+        else if (removedOrderIdx === state.initialRollIdx) newRollIdx = removedOrderIdx % newOrder.length;
+        return {
+          ...state,
+          players: newPlayers,
+          specialsOnBoard: newSpecials,
+          bridgesOnBoard: newBridges,
+          initialRollOrder: newOrder,
+          initialRolls: newRolls,
+          initialRollIdx: Math.min(newRollIdx, newOrder.length),
+        };
+      }
+
+      let newCurrentIdx = state.currentPlayerIndex;
+      if (removedIdx < state.currentPlayerIndex) newCurrentIdx--;
+      else if (removedIdx === state.currentPlayerIndex) newCurrentIdx = removedIdx % newPlayers.length;
+
+      const wasActive = removedIdx === state.currentPlayerIndex;
+      const inDuel = !!state.duelState &&
+        (state.duelState.atkColor === color || state.duelState.defColor === color);
+
+      if (wasActive || inDuel) {
+        const nextPlayer = newPlayers[newCurrentIdx];
+        return {
+          ...state,
+          players: newPlayers,
+          specialsOnBoard: newSpecials,
+          bridgesOnBoard: newBridges,
+          currentPlayerIndex: newCurrentIdx,
+          diceValue: null,
+          secondDiceValue: null,
+          rollsLeft: isAllStuck(nextPlayer) ? 3 : 1,
+          bonusRoll: false,
+          phase: 'rolling',
+          duelState: null,
+          specialTrigger: null,
+        };
+      }
+
+      return {
+        ...state,
+        players: newPlayers,
+        specialsOnBoard: newSpecials,
+        bridgesOnBoard: newBridges,
+        currentPlayerIndex: newCurrentIdx,
+      };
+    }
 
     default:
       return state;

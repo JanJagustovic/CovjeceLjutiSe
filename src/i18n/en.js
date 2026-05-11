@@ -69,6 +69,7 @@ const en = {
   zamjenaNoFigs:    'No pieces available to swap.',
   zamjenaFig:       'Piece',
   zamjenaSkip:      'Skip',
+  zamjenaOwnField:  'This is your own SWAP field — no effect.',
 
   mostCannotPlace:  'BRIDGE not possible — no free parallel square',
   mostCannotField:  'BRIDGE not possible on this square',
@@ -132,6 +133,11 @@ const en = {
   lobbySignOut:         'Sign out',
   lobbyCreateError:     'Failed to create room. Check your connection.',
   lobbyJoinError:       'Failed to join. Try again.',
+
+  lobbyLeaveTitle: 'Leave room?',
+  lobbyLeaveMsg:   'Are you sure you want to leave this room?',
+  lobbyLeaveYes:   'Leave',
+  lobbyLeaveNo:    'Stay',
 
   exitConfirmTitle: 'Exit game?',
   exitConfirmMsg:   'Are you sure you want to quit the current game?',

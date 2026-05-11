@@ -22,7 +22,7 @@ function loadSetup() {
   } catch { return null; }
 }
 
-export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerColor = null }) {
+export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerColor = null, playAgainPath = '/setup' }) {
   const navigate = useNavigate();
   const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
@@ -129,6 +129,13 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
     const timer = setTimeout(endTurn, 1500);
     return () => clearTimeout(timer);
   }, [isNoMoves, endTurn]);
+
+  // Auto-dismiss "own zamjena" info after 1.5s
+  useEffect(() => {
+    if (!isSpecial || state.specialTrigger?.type !== 'zamjena-own') return;
+    const id = setTimeout(dismissSpecialInfo, 1500);
+    return () => clearTimeout(id);
+  }, [isSpecial, state.specialTrigger?.type]);
 
   // Show both duel rolls for 1.5s before resolving — only the attacker (isMyTurn) dispatches
   const ds = state.duelState;
@@ -458,7 +465,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
           state={state}
           players={state.players}
           onRoll={isMyTurn ? initialRoll : null}
-          onContinue={isMyTurn ? continueAfterTie : null}
+          onContinue={continueAfterTie}
           onStart={isMyTurn ? startGame : null}
           t={t}
         />
@@ -483,7 +490,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
             </strong>{' '}
             {t('gameWinMsg')}
           </p>
-          <button className="btn btn-primary" onClick={() => navigate('/setup')}>
+          <button className="btn btn-primary" onClick={() => navigate(playAgainPath)}>
             {t('gamePlayAgain')}
           </button>
           <button className="btn btn-secondary" onClick={() => navigate('/')}>
@@ -617,6 +624,14 @@ function SpecialModal({ trigger, t, isMyTurn = true, onMost, onKockaSetRoll, onK
 
   if (trigger.type === 'kocka') {
     return <KockaModal key={`${trigger.ring}-${trigger.idx}`} t={t} trigger={trigger} onKockaSetRoll={onKockaSetRoll} onKocka={onKocka} isMyTurn={isMyTurn} />;
+  }
+
+  if (trigger.type === 'zamjena-own') {
+    return (
+      <Modal title={`🔄 ${t('specialZamjena')}`}>
+        <p style={{ textAlign: 'center', fontSize: '0.95rem' }}>{t('zamjenaOwnField')}</p>
+      </Modal>
+    );
   }
 
   return null;

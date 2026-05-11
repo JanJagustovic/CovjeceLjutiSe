@@ -3,9 +3,20 @@ import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../firebase';
 import { reducer, initState, getValidMoves } from './useGame';
 
-export function useOnlineGame(setupPlayers, roomId) {
+export function useOnlineGame(setupPlayers, roomId, roomPlayers) {
   const [state, dispatch] = useReducer(reducer, setupPlayers, initState);
   const lastRemoteStateRef = useRef(null);
+  const prevRoomColorsRef = useRef(roomPlayers.map(p => p.color));
+  const roomColorsKey = roomPlayers.map(p => p.color).join(',');
+
+  // Detect player disconnections from the lobby players list
+  useEffect(() => {
+    const curr = new Set(roomColorsKey.split(',').filter(Boolean));
+    prevRoomColorsRef.current.forEach(color => {
+      if (!curr.has(color)) dispatch({ type: 'REMOVE_PLAYER', color });
+    });
+    prevRoomColorsRef.current = roomColorsKey.split(',').filter(Boolean);
+  }, [roomColorsKey]);
 
   // Firestore → local: apply remote state when it changes
   useEffect(() => {

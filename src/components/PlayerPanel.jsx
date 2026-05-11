@@ -65,17 +65,17 @@ export default function PlayerPanel({
               <button
                 className="panel-action-btn panel-action-btn--pickup"
                 onClick={onPickup}
-                style={{ visibility: (phase === 'moving' && hasPickup) ? 'visible' : 'hidden', pointerEvents: (phase === 'moving' && hasPickup) ? 'auto' : 'none' }}
+                style={{ visibility: (isMyTurn && phase === 'moving' && hasPickup) ? 'visible' : 'hidden', pointerEvents: (isMyTurn && phase === 'moving' && hasPickup) ? 'auto' : 'none' }}
               >⬆</button>
               <button
                 className="panel-action-btn panel-action-btn--confirm"
                 onClick={onConfirmPlaceSpecial}
-                style={{ visibility: (phase === 'placing-special' && selectedSpecial) ? 'visible' : 'hidden', pointerEvents: (phase === 'placing-special' && selectedSpecial) ? 'auto' : 'none' }}
+                style={{ visibility: (isMyTurn && phase === 'placing-special' && selectedSpecial) ? 'visible' : 'hidden', pointerEvents: (isMyTurn && phase === 'placing-special' && selectedSpecial) ? 'auto' : 'none' }}
               >✓</button>
               <button
                 className="panel-action-btn panel-action-btn--skip"
                 onClick={onSkipPlaceSpecial}
-                style={{ visibility: phase === 'placing-special' ? 'visible' : 'hidden', pointerEvents: phase === 'placing-special' ? 'auto' : 'none' }}
+                style={{ visibility: (isMyTurn && phase === 'placing-special') ? 'visible' : 'hidden', pointerEvents: (isMyTurn && phase === 'placing-special') ? 'auto' : 'none' }}
               >✕</button>
             </div>
           );

@@ -5,6 +5,7 @@ import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { PLAYER_ORDER, PLAYERS } from '../data/boardLayout';
+import Modal from '../components/Modal.jsx';
 import './Lobby.css';
 import './GameSetup.css';
 
@@ -17,11 +18,29 @@ export default function LobbyRoom() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const { t } = useLanguage();
-  const [room, setRoom]     = useState(null);
-  const [joined, setJoined] = useState(false);
-  const [error, setError]   = useState('');
-  const [myName, setMyName] = useState('');
+  const [room, setRoom]           = useState(null);
+  const [joined, setJoined]       = useState(false);
+  const [error, setError]         = useState('');
+  const [myName, setMyName]       = useState('');
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const initializedRef      = useRef(false);
+  const roomRef             = useRef(null);
+  const userRef             = useRef(user);
+  useEffect(() => { roomRef.current = room; }, [room]);
+  useEffect(() => { userRef.current = user; }, [user]);
+
+  // Remove self from room when leaving the lobby
+  useEffect(() => {
+    return () => {
+      const r = roomRef.current;
+      const u = userRef.current;
+      if (r?.status !== 'waiting' || !u) return;
+      const remaining = r.players.filter(p => p.uid !== u.uid);
+      const updates = { players: remaining, updatedAt: serverTimestamp() };
+      if (r.hostUid === u.uid && remaining.length > 0) updates.hostUid = remaining[0].uid;
+      updateDoc(doc(db, 'rooms', roomId), updates).catch(() => {});
+    };
+  }, []);
 
   useEffect(() => {
     if (!roomId || loading) return;
@@ -106,7 +125,7 @@ export default function LobbyRoom() {
   return (
     <div className="page lobby-room-page">
       <div className="lobby-header">
-        <button className="btn btn-ghost" onClick={() => navigate('/lobby')}>← {t('setupBack')}</button>
+        <button className="btn btn-ghost setup-back-btn" onClick={() => setShowLeaveConfirm(true)}>←</button>
       </div>
 
       <div className="lobby-room-content">
@@ -181,6 +200,14 @@ export default function LobbyRoom() {
           <p className="lobby-status-msg">{t('lobbyWaitingHost')}</p>
         )}
       </div>
+
+      {showLeaveConfirm && (
+        <Modal title={t('lobbyLeaveTitle')}>
+          <p style={{ textAlign: 'center' }}>{t('lobbyLeaveMsg')}</p>
+          <button className="btn btn-danger" onClick={() => navigate('/lobby')}>{t('lobbyLeaveYes')}</button>
+          <button className="btn btn-secondary" onClick={() => setShowLeaveConfirm(false)}>{t('lobbyLeaveNo')}</button>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnlineGame } from '../hooks/useOnlineGame';
@@ -36,23 +36,39 @@ export default function OnlineGameBoard() {
 }
 
 function OnlineGameBoardInner({ room, roomId, myUid }) {
+  const roomRef = useRef(room);
+  useEffect(() => { roomRef.current = room; }, [room]);
+
+  // Remove self from room.players on unmount so other clients detect the disconnect
+  useEffect(() => {
+    return () => {
+      const r = roomRef.current;
+      if (!r) return;
+      updateDoc(doc(db, 'rooms', roomId), {
+        players: r.players.filter(p => p.uid !== myUid),
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    };
+  }, []);
+
   const setupPlayers = room.players.map(p => ({
     color: p.color,
     name: p.name,
     uid: p.uid,
   }));
 
-  const gameHook = useOnlineGame(setupPlayers, roomId);
+  const gameHook = useOnlineGame(setupPlayers, roomId, room.players);
 
-  const myColor = room.players.find(p => p.uid === myUid)?.color;
+  // Use game-state players (not room.players) so indices stay correct after removals
+  const myColor = gameHook.state.players.find(p => p.uid === myUid)?.color;
   const isMyTurn = (() => {
     if (gameHook.state.phase === 'initial-roll') {
       const { initialRollWinner, initialRollIdx, initialRollOrder } = gameHook.state;
       if (initialRollWinner) return myColor === initialRollWinner;
       return myColor === initialRollOrder[initialRollIdx];
     }
-    return room.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
+    return gameHook.state.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
   })();
 
-  return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} myPlayerColor={myColor} />;
+  return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} myPlayerColor={myColor} playAgainPath="/lobby" />;
 }

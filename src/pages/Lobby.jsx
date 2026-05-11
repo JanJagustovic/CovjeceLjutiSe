@@ -29,7 +29,7 @@ export default function Lobby() {
     return (
       <div className="page lobby-page">
         <div className="lobby-header">
-          <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
+          <button className="btn btn-ghost setup-back-btn" onClick={() => navigate('/')}>←</button>
         </div>
         <div className="lobby-content">
           <h2 className="lobby-title">{t('menuMultiplayer')}</h2>
@@ -90,7 +90,7 @@ export default function Lobby() {
 
   const header = (
     <div className="lobby-header">
-      <button className="btn btn-ghost" onClick={() => navigate('/')}>← {t('setupBack')}</button>
+      <button className="btn btn-ghost setup-back-btn" onClick={() => navigate('/')}>←</button>
       <div style={{ display: 'flex', gap: '2px' }}>
         <button className="btn btn-ghost menu-theme-btn" onClick={() => setLanguage(lang === 'hr' ? 'en' : 'hr')}>
           {lang.toUpperCase()}
