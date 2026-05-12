@@ -99,7 +99,7 @@ const hr = {
   specialZamjenaTitle: 'Zamjena figurice',
   specialZamjenaRoll:  'Baci kocku za odabir boje',
 
-  specialBombaMsg:    'Bomba! Pomakni ovu figuricu u sljedećem potezu ili odlazi kući.',
+  specialBombaMsg:    'Bum! Tvoja figurica je otišla kući.',
   specialStopMsg:     'Stop! Figurica se može kretati samo za 1.',
   specialRewindMsg:   'Rewind! Sljedeći potez ide unazad.',
   specialKockaMsg:    'Kocka! Baci dvije kocke.',

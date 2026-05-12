@@ -518,12 +518,17 @@ function applySpecialTrigger(state, trigger) {
   let newPlayers = deepCopyPlayers(state.players);
 
   if (type === 'bomba') {
-    // Arm the figure — it must be moved next turn or it detonates.
-    // The bomb stays on the square until the piece escapes (moves away) or detonates.
-    const mover = newPlayers.find(p => p.color === playerColor);
-    const fig = mover.figures.find(f => f.id === figId);
-    fig.bombActive = { placedBy: trigger.placedBy };
-    return { ...state, players: newPlayers, phase: 'special-trigger', specialTrigger: trigger };
+    // Instant explosion: piece goes home, bomb removed, bomb returned to placer's hand.
+    const newSpecials = { ...state.specialsOnBoard };
+    delete newSpecials[`${ring}-${idx}`];
+    const exploder = newPlayers.find(p => p.color === playerColor);
+    const fig = exploder.figures.find(f => f.id === figId);
+    fig.pos = 'home';
+    fig.stopActive = false;
+    fig.rewindNext = false;
+    fig.bombActive = null;
+    exploder.specialsHeld = [...exploder.specialsHeld, 'bomba'];
+    return { ...state, players: newPlayers, specialsOnBoard: newSpecials, phase: 'special-trigger', specialTrigger: trigger };
   }
 
   if (type === 'stop') {
@@ -654,6 +659,13 @@ function reducer(state, action) {
       const newBridges = specialType === 'most'
         ? { ...state.bridgesOnBoard, [spKey]: { placedBy: player.color } }
         : state.bridgesOnBoard;
+
+      // Arm the placer's own piece standing on the bomb square
+      if (specialType === 'bomba') {
+        const placer = newPlayers.find(p => p.color === player.color);
+        const placerFig = placer.figures.find(f => figureOnPath(f.pos, ring, idx));
+        if (placerFig) placerFig.bombActive = { placedBy: player.color };
+      }
 
       // Check if figure on this cell is immediately affected (rule 9c)
       const figHere = findFigureOnCell(newPlayers, ring, idx);
