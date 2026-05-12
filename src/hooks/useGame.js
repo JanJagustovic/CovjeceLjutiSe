@@ -294,6 +294,10 @@ function applyMove(state, move) {
   const mover = newPlayers.find(p => p.color === player.color);
   const fig = mover.figures.find(f => f.id === move.figId);
 
+  // Snapshot specials before any detonation side-effects so afterMove uses the
+  // pre-move hand (returned bombs shouldn't unlock a placement opportunity).
+  const preMoveSpecials = [...mover.specialsHeld];
+
   // Clear flags on move
   fig.rewindNext = false;
   fig.stopActive = false;
@@ -397,13 +401,14 @@ function applyMove(state, move) {
     return applySpecialTrigger({ ...state, players: newPlayers, specialsOnBoard: newSpecials }, specialTrigger);
   }
 
-  return afterMove({ ...state, players: newPlayers, specialsOnBoard: newSpecials }, move);
+  return afterMove({ ...state, players: newPlayers, specialsOnBoard: newSpecials }, move, preMoveSpecials);
 }
 
-function afterMove(state, move) {
+function afterMove(state, move, preMoveSpecials = null) {
   const player = state.players[state.currentPlayerIndex];
-  const hasSpecials = player.specialsHeld.length > 0;
-  const hasBridge = player.specialsHeld.includes('most');
+  const effectiveSpecials = preMoveSpecials ?? player.specialsHeld;
+  const hasSpecials = effectiveSpecials.length > 0;
+  const hasBridge = effectiveSpecials.includes('most');
   const spKey = `${move.ring}-${move.idx}`;
   const activeColors = state.players.map(p => p.color);
   const isSpawnPoint = typeof move.ring === 'string' && activeColors.some(color => {
@@ -817,6 +822,10 @@ function reducer(state, action) {
       const newState = { ...state, specialTrigger: null };
       if (trigger?.type === 'zamjena-own') {
         return afterMove(newState, { type: 'move', ring: trigger.ring, idx: trigger.idx });
+      }
+      // Bomb blew up the current player's own piece — forfeit the bonus roll
+      if (trigger?.type === 'bomba' && trigger.playerColor === state.players[state.currentPlayerIndex].color) {
+        return advanceTurn({ ...newState, bonusRoll: false });
       }
       if (newState.bonusRoll) {
         return { ...newState, phase: 'rolling', diceValue: null, bonusRoll: false, rollsLeft: 1 };

@@ -6,6 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import { useOnlineGame } from '../hooks/useOnlineGame';
 import GameBoard from './GameBoard';
 
+const HEARTBEAT_INTERVAL = 10_000; // write presence every 10s
+const STALE_THRESHOLD    = 30_000; // player considered gone after 30s without heartbeat
+
 export default function OnlineGameBoard() {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -39,15 +42,41 @@ function OnlineGameBoardInner({ room, roomId, myUid }) {
   const roomRef = useRef(room);
   useEffect(() => { roomRef.current = room; }, [room]);
 
-  // Remove self from room.players on unmount so other clients detect the disconnect
+  // ── Presence: write heartbeat every 10s so others can detect disconnect ──
   useEffect(() => {
+    const writePresence = () =>
+      updateDoc(doc(db, 'rooms', roomId), {
+        [`presence.${myUid}`]: serverTimestamp(),
+      }).catch(() => {});
+
+    writePresence();
+    const id = setInterval(writePresence, HEARTBEAT_INTERVAL);
+
+    // Also fire on pagehide (more reliable than useEffect cleanup on mobile)
+    const onPageHide = () => writePresence();
+    window.addEventListener('pagehide', onPageHide);
+
     return () => {
+      clearInterval(id);
+      window.removeEventListener('pagehide', onPageHide);
+    };
+  }, []);
+
+  // ── Cleanup: remove self from room.players on unmount / pagehide ──
+  useEffect(() => {
+    const doLeave = () => {
       const r = roomRef.current;
       if (!r) return;
       updateDoc(doc(db, 'rooms', roomId), {
         players: r.players.filter(p => p.uid !== myUid),
         updatedAt: serverTimestamp(),
       }).catch(() => {});
+    };
+
+    window.addEventListener('pagehide', doLeave);
+    return () => {
+      doLeave();
+      window.removeEventListener('pagehide', doLeave);
     };
   }, []);
 
@@ -58,6 +87,29 @@ function OnlineGameBoardInner({ room, roomId, myUid }) {
   }));
 
   const gameHook = useOnlineGame(setupPlayers, roomId, room.players);
+
+  // ── Stale-presence detection: if another player stopped sending heartbeats,
+  //    remove them from room.players so the existing REMOVE_PLAYER path fires. ──
+  useEffect(() => {
+    if (gameHook.state.phase === 'game-over') return;
+    if (!room.presence) return;
+
+    const now = Date.now();
+    const stalePlayer = gameHook.state.players.find(p => {
+      if (!p.uid || p.uid === myUid) return false;
+      const lastSeen = room.presence[p.uid]?.toMillis?.();
+      // Only stale if they have sent at least one heartbeat that is now too old.
+      // Players who haven't written yet (just connected) are not stale.
+      return lastSeen && now - lastSeen > STALE_THRESHOLD;
+    });
+
+    if (stalePlayer) {
+      updateDoc(doc(db, 'rooms', roomId), {
+        players: room.players.filter(p => p.uid !== stalePlayer.uid),
+        updatedAt: serverTimestamp(),
+      }).catch(() => {});
+    }
+  }, [room.presence, gameHook.state.players, gameHook.state.phase]);
 
   // Use game-state players (not room.players) so indices stay correct after removals
   const myColor = gameHook.state.players.find(p => p.uid === myUid)?.color;
