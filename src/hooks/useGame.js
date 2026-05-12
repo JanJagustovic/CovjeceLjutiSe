@@ -351,37 +351,50 @@ function applyMove(state, move) {
     // Check special square — applies even on rewind moves
     const spKey = `${move.ring}-${move.idx}`;
     if (!duelState && newSpecials[spKey]) {
+      const sp = newSpecials[spKey];
+      const isSelfZamjena = sp.type === 'zamjena' && sp.placedBy === player.color;
       specialTrigger = {
-        type: newSpecials[spKey].type,
+        type: isSelfZamjena ? 'zamjena-own' : sp.type,
         ring: move.ring,
         idx: move.idx,
         figId: move.figId,
         playerColor: player.color,
-        placedBy: newSpecials[spKey].placedBy,
+        placedBy: sp.placedBy,
       };
     } else if (!duelState && move.type !== 'exit') {
-      // Bridge: check direct cell first, then parallel cell
+      // Bridge: check direct cell first, then parallel cell.
+      // Only offer crossing if own piece doesn't already occupy the destination.
       const parallel = getBridgeParallel(move.ring, move.idx);
       if (state.bridgesOnBoard[spKey]) {
-        specialTrigger = {
-          type: 'most',
-          ring: move.ring,
-          idx: move.idx,
-          figId: move.figId,
-          playerColor: player.color,
-          placedBy: state.bridgesOnBoard[spKey].placedBy,
-        };
-      } else if (parallel) {
-        const parallelKey = `${parallel.ring}-${parallel.idx}`;
-        if (state.bridgesOnBoard[parallelKey]) {
+        const destBlockedByOwn = parallel && !!findFigureOnCell(
+          newPlayers.filter(p => p.color === player.color), parallel.ring, parallel.idx
+        );
+        if (!destBlockedByOwn) {
           specialTrigger = {
             type: 'most',
             ring: move.ring,
             idx: move.idx,
             figId: move.figId,
             playerColor: player.color,
-            placedBy: state.bridgesOnBoard[parallelKey].placedBy,
+            placedBy: state.bridgesOnBoard[spKey].placedBy,
           };
+        }
+      } else if (parallel) {
+        const parallelKey = `${parallel.ring}-${parallel.idx}`;
+        if (state.bridgesOnBoard[parallelKey]) {
+          const destBlockedByOwn = !!findFigureOnCell(
+            newPlayers.filter(p => p.color === player.color), parallel.ring, parallel.idx
+          );
+          if (!destBlockedByOwn) {
+            specialTrigger = {
+              type: 'most',
+              ring: move.ring,
+              idx: move.idx,
+              figId: move.figId,
+              playerColor: player.color,
+              placedBy: state.bridgesOnBoard[parallelKey].placedBy,
+            };
+          }
         }
       }
     }
@@ -935,6 +948,7 @@ function reducer(state, action) {
           players: newPlayers,
           specialsOnBoard: newSpecials,
           bridgesOnBoard: newBridges,
+          currentPlayerIndex: 0,
           winner: newPlayers[0]?.color ?? null,
           phase: 'game-over',
           duelState: null,
