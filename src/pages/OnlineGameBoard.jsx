@@ -113,14 +113,15 @@ function OnlineGameBoardInner({ room, roomId, myUid }) {
 
   // Use game-state players (not room.players) so indices stay correct after removals
   const myColor = gameHook.state.players.find(p => p.uid === myUid)?.color;
+  const isAdmin = myUid === room.hostUid;
   const isMyTurn = (() => {
     if (gameHook.state.phase === 'initial-roll') {
       const { initialRollWinner, initialRollIdx, initialRollOrder } = gameHook.state;
-      if (initialRollWinner) return myColor === initialRollWinner;
+      if (initialRollWinner) return false; // start/reroll handled by isAdmin
       return myColor === initialRollOrder[initialRollIdx];
     }
     return gameHook.state.players[gameHook.state.currentPlayerIndex]?.uid === myUid;
   })();
 
-  return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} myPlayerColor={myColor} playAgainPath="/lobby" />;
+  return <GameBoard gameHook={gameHook} isMyTurn={isMyTurn} myPlayerColor={myColor} playAgainPath="/lobby" isHost={isAdmin} />;
 }

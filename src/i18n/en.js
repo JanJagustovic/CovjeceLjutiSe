@@ -60,6 +60,7 @@ const en = {
   initialRollStarts: 'starts!',
   initialRollBtn:    'roll!',
   initialRollReroll: 'Roll again',
+  waitingForHost:    'Waiting for host…',
 
   ok:     'OK',
   duelVs: 'vs',

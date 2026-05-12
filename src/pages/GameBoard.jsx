@@ -22,7 +22,7 @@ function loadSetup() {
   } catch { return null; }
 }
 
-export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerColor = null, playAgainPath = '/setup' }) {
+export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerColor = null, playAgainPath = '/setup', isHost = true }) {
   const navigate = useNavigate();
   const { t, lang, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
@@ -151,7 +151,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
     : null;
   const zamjenaEligibleFigs = zamjenaPlacer
     ? zamjenaPlacer.figures
-        .filter(f => typeof f.pos === 'object' && f.pos.ring)
+        .filter(f => typeof f.pos === 'object' && f.pos.ring
+          && !(f.pos.ring === state.specialTrigger.ring && f.pos.idx === state.specialTrigger.idx))
         .map(f => {
           const path = f.pos.ring === 'outer' ? OUTER_PATH : INNER_PATH;
           const cell = path[f.pos.idx];
@@ -431,7 +432,7 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
               <p>{t('duelAttacker')}: <strong>{ds.atkRoll}</strong></p>
             )}
             {ds.atkRoll !== null && ds.defRoll === null && canRollDef && (
-              <button className="btn btn-secondary" onClick={() => handleDuelRoll('def')}>
+              <button className="btn btn-primary" onClick={() => handleDuelRoll('def')}>
                 🎲 {defName} {t('duelRoll')}
               </button>
             )}
@@ -465,8 +466,8 @@ export default function GameBoard({ gameHook = null, isMyTurn = true, myPlayerCo
           state={state}
           players={state.players}
           onRoll={isMyTurn ? initialRoll : null}
-          onContinue={continueAfterTie}
-          onStart={isMyTurn ? startGame : null}
+          onContinue={isHost ? continueAfterTie : null}
+          onStart={isHost ? startGame : null}
           t={t}
         />
       )}
@@ -692,16 +693,17 @@ function InitialRollModal({ state, players, onRoll, onContinue, onStart, t }) {
           <p style={{ textAlign: 'center', fontWeight: 700, fontSize: '1rem', marginTop: '4px' }}>
             <span style={{ color: COLOR_HEX[initialRollWinner] }}>{winner.name}</span> {t('initialRollStarts')}
           </p>
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={onStart} disabled={!onStart}>
-            🎮 {t('setupStart')}
-          </button>
+          {onStart
+            ? <button className="btn btn-primary" style={{ width: '100%' }} onClick={onStart}>🎮 {t('setupStart')}</button>
+            : <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>⏳ {t('waitingForHost')}</p>
+          }
         </>
       )}
 
       {initialRollTied && !winner && (
-        <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onContinue} disabled={!onContinue}>
-          🎲 {t('initialRollReroll')}
-        </button>
+        onContinue
+          ? <button className="btn btn-secondary" style={{ width: '100%' }} onClick={onContinue}>🎲 {t('initialRollReroll')}</button>
+          : <p style={{ textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>⏳ {t('waitingForHost')}</p>
       )}
 
       {!allRolled && (

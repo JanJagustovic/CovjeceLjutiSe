@@ -60,6 +60,7 @@ const hr = {
   initialRollStarts: 'počinje!',
   initialRollBtn:    'baci!',
   initialRollReroll: 'Baci opet',
+  waitingForHost:    'Čekanje na hosta…',
 
   ok:     'OK',
   duelVs: 'vs',
